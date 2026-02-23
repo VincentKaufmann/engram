@@ -30,3 +30,4 @@ Kaufmann, V. (2026). Engram V3: A Cognitive Mesh Architecture for Abstract Reaso
 ## License
 
 This work is licensed under CC BY-NC 4.0. See [LICENSE](LICENSE).
+
