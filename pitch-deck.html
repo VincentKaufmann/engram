@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engram - Cognitive Architecture for AGI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #07080d;
+  --bg2: #0c0e15;
+  --accent: #00d4ff;
+  --accent2: #6366f1;
+  --accent3: #8b5cf6;
+  --green: #10b981;
+  --orange: #f59e0b;
+  --red: #ef4444;
+  --pink: #ec4899;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --dim: #334155;
+  --card: #111827;
+  --border: #1e293b;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── Slide Container ── */
+.slide-container { position: relative; width: 100vw; height: 100vh; }
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 60px 80px;
+  opacity: 0;
+  transform: translateX(60px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none;
+  overflow-y: auto;
+}
+.slide.active {
+  opacity: 1; transform: translateX(0); pointer-events: all;
+}
+.slide.prev {
+  opacity: 0; transform: translateX(-60px);
+}
+
+/* ── Typography ── */
+h1 { font-size: 56px; font-weight: 800; letter-spacing: -2px; line-height: 1.1; }
+h2 { font-size: 42px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; }
+h3 { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+h4 { font-size: 20px; font-weight: 600; }
+p { font-size: 18px; line-height: 1.6; color: var(--muted); max-width: 800px; }
+.big-number { font-size: 64px; font-weight: 900; letter-spacing: -3px; }
+.label { font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.tagline { font-size: 24px; font-weight: 300; color: var(--muted); margin-top: 16px; letter-spacing: -0.3px; }
+
+/* ── Accent colors ── */
+.accent { color: var(--accent); }
+.accent2 { color: var(--accent2); }
+.accent3 { color: var(--accent3); }
+.green { color: var(--green); }
+.orange { color: var(--orange); }
+.pink { color: var(--pink); }
+
+/* ── Gradient text ── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+}
+.card-grid {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  max-width: 1200px;
+}
+.card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.card-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* ── Stat card ── */
+.stat-card { text-align: center; }
+.stat-card .stat-value { font-size: 48px; font-weight: 800; margin-bottom: 8px; }
+.stat-card .stat-label { font-size: 14px; color: var(--muted); font-weight: 500; }
+
+/* ── Progress bars ── */
+.progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1s ease;
+}
+
+/* ── Slide indicator ── */
+.slide-nav {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+.slide-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--dim);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.slide-dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+
+/* ── Slide counter ── */
+.slide-counter {
+  position: fixed;
+  bottom: 30px;
+  right: 40px;
+  font-size: 14px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+  z-index: 100;
+}
+
+/* ── Logo ── */
+.logo-mark {
+  position: fixed;
+  top: 30px;
+  left: 40px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 3px;
+  z-index: 100;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Key controls ── */
+.key-hint {
+  position: fixed;
+  bottom: 30px;
+  left: 40px;
+  font-size: 12px;
+  color: var(--dim);
+  z-index: 100;
+}
+
+/* ── Animations ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.3); }
+}
+
+.float { animation: float 6s ease-in-out infinite; }
+.pulse { animation: pulse 2s ease-in-out infinite; }
+.glow { animation: glow 3s ease-in-out infinite; }
+
+/* ── Architecture diagram ── */
+.arch-diagram {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.arch-layer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  position: relative;
+}
+.arch-layer .layer-name {
+  font-size: 13px;
+  font-weight: 700;
+  width: 180px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+.arch-layer .layer-desc {
+  font-size: 13px;
+  color: var(--muted);
+  flex: 1;
+}
+.arch-layer .layer-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.connector {
+  width: 2px;
+  height: 12px;
+  background: var(--border);
+  margin: 0 auto;
+}
+
+/* ── Timeline / Roadmap ── */
+.timeline {
+  display: flex;
+  gap: 0;
+  width: 100%;
+  max-width: 1100px;
+  position: relative;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), var(--green));
+  border-radius: 2px;
+}
+.timeline-item {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  padding: 0 10px;
+}
+.timeline-dot {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  position: relative;
+  z-index: 2;
+}
+.timeline-item .timeline-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.timeline-item .timeline-date {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.timeline-item .timeline-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ── Table ── */
+.pitch-table {
+  width: 100%;
+  max-width: 900px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.pitch-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 2px solid var(--border);
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.pitch-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.pitch-table tr:last-child td { border-bottom: none; }
+.pitch-table .right { text-align: right; }
+.pitch-table .bold { font-weight: 700; }
+
+/* ── Novel badge ── */
+.novel-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* ── Bullet list ── */
+.bullet-list {
+  list-style: none;
+  max-width: 800px;
+}
+.bullet-list li {
+  padding: 10px 0;
+  padding-left: 24px;
+  position: relative;
+  font-size: 17px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.bullet-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ── Full-width content ── */
+.full-width { width: 100%; max-width: 1200px; }
+.text-center { text-align: center; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mt-32 { margin-top: 32px; }
+.mt-48 { margin-top: 48px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.mb-32 { margin-bottom: 32px; }
+.gap-40 { gap: 40px; }
+
+/* ── Background effects ── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(30,41,59,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,41,59,0.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.bg-radial {
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.08) 0%, transparent 60%);
+}
+.bg-radial-purple {
+  background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 60%);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .slide { padding: 30px 20px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 28px; }
+  .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+  .big-number { font-size: 40px; }
+}
+
+/* ── Explainer sub-pages ── */
+.explainer-page {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  padding-top: 4px; overflow-y: auto; gap: 10px;
+}
+/* Architecture mini-diagram in explainer */
+.arch-mini { display: flex; align-items: center; justify-content: center; gap: 0; width: 100%; max-width: 1100px; padding: 8px 0; flex-shrink: 0; }
+.arch-mini-box {
+  padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600;
+  font-family: 'Inter', sans-serif; letter-spacing: 0.5px; border: 1px solid var(--dim);
+  background: rgba(255,255,255,0.02); color: var(--muted); opacity: 0.35;
+  transition: all 0.4s ease; text-align: center; line-height: 1.3; min-width: 90px;
+}
+.arch-mini-box.arch-lit {
+  opacity: 1; border-color: var(--arch-color);
+  background: color-mix(in srgb, var(--arch-color) 8%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--arch-color) 20%, transparent);
+  color: var(--arch-color);
+}
+.arch-mini-box.arch-done { opacity: 0.25; }
+.arch-mini-arrow { color: var(--dim); font-size: 10px; margin: 0 3px; }
+.arch-mini-arrow.arch-lit-arrow { color: var(--arch-color); opacity: 0.7; }
+.arch-mini-sub { font-size: 8px; color: var(--muted); font-weight: 400; display: block; margin-top: 1px; }
+/* Compact cards inside explainer pages - fixed height for visual consistency */
+.explainer-page .card { padding: 20px; border-radius: 12px; min-height: 320px; }
+.explainer-page .card p { font-size: 14px; line-height: 1.6; }
+.explainer-page .card h4 { font-size: 18px; }
+.explainer-page > div:nth-child(2) { align-items: stretch !important; }
+.explainer-page.active { opacity: 1; pointer-events: all; }
+
+/* Flow diagram */
+.flow-step {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 14px; border-radius: 8px; transition: all 0.4s ease;
+  border: 1px solid var(--dim); background: rgba(255,255,255,0.02);
+  opacity: 0.35; min-width: 80px;
+}
+.flow-step.flow-active {
+  opacity: 1; border-color: var(--flow-color);
+  background: color-mix(in srgb, var(--flow-color) 10%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--flow-color) 25%, transparent);
+}
+.flow-step.flow-done {
+  opacity: 0.7; border-color: var(--flow-color);
+  background: color-mix(in srgb, var(--flow-color) 5%, transparent);
+}
+.flow-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--bg);
+  background: var(--flow-color); transition: all 0.4s ease;
+}
+.flow-step:not(.flow-active):not(.flow-done) .flow-icon { background: var(--dim); color: var(--muted); }
+.flow-label { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.3; transition: color 0.4s; }
+.flow-step.flow-active .flow-label { color: var(--text); }
+.flow-arrow { color: var(--dim); font-size: 10px; margin: 0 4px; }
+
+#explainer-prev:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+#explainer-next:hover { background: rgba(0,212,255,0.25); }
+
+/* ── Print / PDF ── */
+@media print {
+  body { overflow: visible; height: auto; }
+  .slide-container { position: static; width: 100%; height: auto; }
+  .slide {
+    position: relative !important;
+    inset: auto !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: all !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    min-height: 100vh;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 60px;
+  }
+  .slide:last-child { page-break-after: auto; }
+  .slide-nav, .slide-counter, .logo-mark, .key-hint { display: none !important; }
+  .card { break-inside: avoid; }
+  .card-grid { break-inside: avoid; }
+  .arch-layer { break-inside: avoid; }
+  .timeline { break-inside: avoid; }
+  h1 { font-size: 44px; }
+  h2 { font-size: 34px; }
+  .pitch-table { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div class="logo-mark">ENGRAM</div>
+<div class="key-hint">← → or click to navigate</div>
+<div class="slide-counter"><span id="slide-num">1</span> / <span id="slide-total">12</span></div>
+
+<!-- SLIDE NAV -->
+<div class="slide-nav" id="slide-nav"></div>
+
+<div class="slide-container" id="slides">
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 1: TITLE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide active bg-grid bg-radial" data-slide="0">
+  <div class="text-center">
+    <div class="label mb-24">PRE-SEED &middot; FEBRUARY 2026</div>
+    <h1><span class="gradient-text">Engram</span></h1>
+    <div class="tagline">A Cognitive Architecture for General Intelligence</div>
+    <p class="mt-32" style="margin: 32px auto 0; text-align: center;">
+      We're building the first AI system that reasons like a human -<br>
+      by combining diffusion models with transformers in a way nobody has tried before.
+    </p>
+    <div style="display:flex; align-items:center; justify-content:center; gap:14px; margin-top:24px;">
+      <span style="font-size:28px; font-weight:800; color:var(--orange);">Slick V1.5</span>
+      <span style="font-size:28px; font-weight:800; color:var(--text);">-</span>
+      <span style="font-size:28px; font-weight:800; color:var(--text);">Completed February 2026</span>
+    </div>
+    <div class="mt-48" style="display:flex; gap:20px; justify-content:center; margin-top:24px;">
+      <div class="stat-card">
+        <div class="stat-value accent">6</div>
+        <div class="stat-label">Breakthroughs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value accent2">542M</div>
+        <div class="stat-label">Parameters Trained</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value accent3">1</div>
+        <div class="stat-label">Engineer</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value green">10</div>
+        <div class="stat-label">Days to Build</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value gradient-text">400+</div>
+        <div class="stat-label">Hours of Development</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 2: THE PARAMETER ARMS RACE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="1">
+  <div class="full-width text-center">
+    <div class="label mb-16">THE $400 BILLION DEAD END</div>
+    <h2>Bigger Models, <span style="color:var(--red);">Same Problem</span></h2>
+    <p class="mt-8" style="margin:8px auto 24px; max-width:900px; font-size:18px;">The AI industry's answer to every limitation has been "more parameters." This approach is failing.</p>
+
+    <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:24px; max-width:1100px; margin:0 auto; align-items:start;">
+
+      <!-- LEFT: The Growth + Cost Problem -->
+      <div>
+        <!-- Parameter growth chart as text blocks -->
+        <div class="card" style="border-color:var(--red); padding:20px;">
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">The Arms Race</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:10px; color:#555; width:55px; flex-shrink:0;">2019</span>
+              <div style="height:16px; border-radius:3px; background:var(--accent2); width:2%; min-width:6px;"></div>
+              <span style="font-size:11px; color:var(--muted);">GPT-2 - <strong style="color:var(--text);">1.5B</strong></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:10px; color:#555; width:55px; flex-shrink:0;">2020</span>
+              <div style="height:16px; border-radius:3px; background:var(--accent2); width:10%;"></div>
+              <span style="font-size:11px; color:var(--muted);">GPT-3 - <strong style="color:var(--text);">175B</strong> <span style="color:var(--red); font-size:10px;">(117x)</span></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:10px; color:#555; width:55px; flex-shrink:0;">2023</span>
+              <div style="height:16px; border-radius:3px; background:var(--red); width:100%;"></div>
+              <span style="font-size:11px; color:var(--muted);">GPT-4 - <strong style="color:var(--text);">1.8T</strong> <span style="color:var(--red); font-size:10px;">(10x more, diminishing returns)</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cost catastrophe -->
+        <div class="card" style="border-color:var(--dim); padding:20px; margin-top:12px;">
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">What That Costs</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="padding:10px; background:rgba(239,68,68,0.06); border-radius:6px; text-align:center;">
+              <div style="font-size:20px; font-weight:800; color:var(--red);">$400B</div>
+              <div style="font-size:10px; color:var(--muted);">Big Tech AI capex (2025)</div>
+            </div>
+            <div style="padding:10px; background:rgba(239,68,68,0.06); border-radius:6px; text-align:center;">
+              <div style="font-size:20px; font-weight:800; color:var(--red);">$5B</div>
+              <div style="font-size:10px; color:var(--muted);">OpenAI loss (2024)</div>
+            </div>
+            <div style="padding:10px; background:rgba(239,68,68,0.06); border-radius:6px; text-align:center;">
+              <div style="font-size:20px; font-weight:800; color:var(--red);">$1,000+</div>
+              <div style="font-size:10px; color:var(--muted);">Cost per o3 query</div>
+            </div>
+            <div style="padding:10px; background:rgba(239,68,68,0.06); border-radius:6px; text-align:center;">
+              <div style="font-size:20px; font-weight:800; color:var(--red);">5%</div>
+              <div style="font-size:10px; color:var(--muted);">Enterprise AI pilots with positive ROI</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Our Approach - on the left -->
+        <div class="card" style="border-color:var(--accent); background:rgba(0,212,255,0.03); padding:20px; margin-top:12px;">
+          <div style="font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Our Approach</div>
+          <div style="font-size:13px; line-height:1.8; color:var(--muted);">
+            <strong style="color:var(--accent);">Build the architecture right, then scale.</strong> Not the other way around. Engram is 542M parameters today - 3,300x smaller than GPT-4 - yet it has capabilities no trillion-parameter model possesses: internal cognitive state, iterative diffusion reasoning, mental simulation, and continuous self-verification.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Why it's a dead end + quotes -->
+      <div>
+        <div class="card" style="border-color:var(--dim); padding:20px;">
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Why More Parameters &#8800; Intelligence</div>
+          <div style="font-size:13px; line-height:1.8; color:var(--muted);">
+            <p>The human brain has ~86B neurons with ~100T synapses. It runs on <strong style="color:var(--text);">20 watts</strong>. GPT-4 has 1.8T parameters, runs on <strong style="color:var(--red);">thousands of GPUs</strong>, and still can't do what a 5-year-old does: look at a puzzle, imagine different solutions, check if they make sense, and try again.</p>
+            <p style="margin-top:8px;">The problem isn't size. The problem is <strong style="color:var(--red);">architecture</strong>. Every LLM today is a token predictor with reasoning bolted on as an afterthought. More parameters just make it a bigger, more expensive token predictor.</p>
+          </div>
+        </div>
+
+        <!-- Quotes - on the right -->
+        <div style="padding:14px 16px; border-left:2px solid var(--accent); background:rgba(255,255,255,0.02); border-radius:0 6px 6px 0; margin-top:12px;">
+          <div style="font-size:13px; color:var(--muted); font-style:italic; line-height:1.5;">"Pretraining as we know it will end. The era of 'just add GPUs' is over."</div>
+          <div style="font-size:11px; color:var(--accent); margin-top:6px;">- Ilya Sutskever, NeurIPS 2024</div>
+        </div>
+        <div style="padding:14px 16px; border-left:2px solid var(--orange); background:rgba(255,255,255,0.02); border-radius:0 6px 6px 0; margin-top:8px;">
+          <div style="font-size:13px; color:var(--muted); font-style:italic; line-height:1.5;">"LLMs are a dead end on the path to human-level intelligence."</div>
+          <div style="font-size:11px; color:var(--orange); margin-top:6px;">- Yann LeCun, Chief AI Scientist, Meta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 3: VERSUS - HOW AI THINKS TODAY -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="2">
+  <div class="full-width text-center">
+    <div class="label mb-16">THE FUNDAMENTAL FLAW</div>
+    <h2>How AI "Thinks" Today - <span style="color:var(--red);">Next Token Prediction</span></h2>
+
+    <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:24px; max-width:1100px; margin:32px auto 0; align-items:start;">
+
+      <!-- LEFT: Autoregressive -->
+      <div>
+        <div style="text-align:center; margin-bottom:16px; padding:10px 0 12px; border-bottom:2px solid rgba(239,68,68,0.3);">
+          <h3 style="font-size:22px; font-weight:800; color:var(--red); letter-spacing:1px; margin:0;">Autoregressive (GPT-4, Gemini)</h3>
+        </div>
+        <div class="card" style="border-color:var(--red); background:rgba(239,68,68,0.03);">
+
+        <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); text-align:center; line-height:2.2; margin-bottom:16px;">
+          <div>The → <span style="color:var(--text);">cat</span></div>
+          <div>The cat → <span style="color:var(--text);">sat</span></div>
+          <div>The cat sat → <span style="color:var(--text);">on</span></div>
+          <div>The cat sat on → <span style="color:var(--text);">the</span></div>
+          <div>The cat sat on the → <span style="color:var(--text);">mat</span><span style="color:var(--red);"> ✓ done</span></div>
+        </div>
+        <div style="padding:12px; background:rgba(239,68,68,0.08); border-radius:6px; margin-bottom:12px;">
+          <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); text-align:center;">
+            P(x<sub>t</sub> | x<sub>1</sub>, ..., x<sub>t-1</sub>) = softmax(W &middot; h<sub>t</sub>)
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--red); text-align:center; font-weight:600;">One direction. No revision. Each token is final.</div>
+        <ul style="font-size:12px; color:var(--muted); margin-top:12px; line-height:1.8; list-style:none; padding:0;">
+          <li style="color:var(--red);">&#10007; Can't go back and fix earlier tokens</li>
+          <li style="color:var(--red);">&#10007; Commits before understanding the full problem</li>
+          <li style="color:var(--red);">&#10007; No hypothesis testing, no simulation</li>
+          <li style="color:var(--red);">&#10007; No internal state - every prompt feels the same</li>
+        </ul>
+      </div>
+      </div>
+
+      <!-- VS divider -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div style="width:2px; height:60px; background:linear-gradient(to bottom, transparent, var(--dim));"></div>
+        <div style="font-size:24px; font-weight:900; color:var(--dim); letter-spacing:4px;">VS</div>
+        <div style="width:2px; height:60px; background:linear-gradient(to bottom, var(--dim), transparent);"></div>
+      </div>
+
+      <!-- RIGHT: Engram -->
+      <div>
+        <div style="text-align:center; margin-bottom:16px; padding:10px 0 12px; border-bottom:2px solid rgba(0,212,255,0.3);">
+          <h3 style="font-size:22px; font-weight:800; color:var(--accent); letter-spacing:1px; margin:0;">Iterative Diffusion Reasoning</h3>
+        </div>
+        <div class="card glow" style="border-color:var(--accent); background:rgba(0,212,255,0.03);">
+
+        <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); text-align:center; line-height:2.2; margin-bottom:16px;">
+          <div><span style="color:#333;">[? ? ? ? ?]</span> → rough sketch</div>
+          <div><span style="color:#333;">[? </span><span style="color:var(--accent);">cat</span><span style="color:#333;"> ? ? </span><span style="color:var(--accent);">mat</span><span style="color:#333;">]</span> → confident parts first</div>
+          <div><span style="color:#333;">[</span><span style="color:var(--accent);">The</span><span style="color:#333;"> cat </span><span style="color:var(--accent);">sat</span><span style="color:#333;"> ? mat]</span> → refine</div>
+          <div><span style="color:var(--text);">[The cat sat on the mat]</span><span style="color:var(--accent);"> ✓ converged</span></div>
+        </div>
+        <div style="padding:12px; background:rgba(0,212,255,0.08); border-radius:6px; margin-bottom:12px;">
+          <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); text-align:center;">
+            x<sub>t</sub> = denoise(x<sub>t-1</sub>, &gamma;<sub>state</sub>, t) &middot; <span style="color:var(--accent);">all positions at once</span>
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--accent); text-align:center; font-weight:600;">Iterative. Revisable. Sees the whole problem.</div>
+        <ul style="font-size:12px; color:var(--muted); margin-top:12px; line-height:1.8; list-style:none; padding:0;">
+          <li style="color:var(--accent);">&#10003; Refines uncertain parts, keeps confident ones</li>
+          <li style="color:var(--accent);">&#10003; Tests hypotheses mentally before committing</li>
+          <li style="color:var(--accent);">&#10003; Internal state drives reasoning (curiosity, confidence)</li>
+          <li style="color:var(--accent);">&#10003; Self-correcting metacognition at every step</li>
+        </ul>
+      </div>
+      </div>
+    </div>
+
+    <div class="card mt-24" style="max-width:800px; margin:24px auto 0; text-align:center; border-color:var(--dim);">
+      <p style="font-size:14px; color:var(--muted); margin:0;">
+        <strong style="color:var(--text);">GPT-4, Gemini, LLaMA, Grok</strong> - all autoregressive. All predict the next token.
+        <br>The entire $200B AI industry runs on the left column.
+        <br><strong style="color:var(--accent);">We built the right column.</strong>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 3: THE PROBLEM -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-radial" data-slide="3">
+  <div class="text-center full-width">
+    <div class="label mb-16">THE PROBLEM</div>
+    <h2>Today's AI Can't <span class="accent">Actually Reason</span></h2>
+    <p class="mt-16" style="margin: 16px auto; max-width:900px;">
+      Large language models generate text left-to-right, one token at a time. They can't revise, can't simulate, can't remember you.
+      <br>No persistent memory - every conversation starts from zero. Tiny context windows that overflow on real tasks.
+      <br>Billions of parameters, hundreds of GPUs, and they're still <strong style="color:var(--red);">slow, expensive, and stateless</strong>. That's not intelligence - it's autocomplete at scale.
+    </p>
+
+    <div class="card-grid cols-3 mt-48">
+      <div class="card text-center" style="padding-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:16px;">🔤</div>
+        <h4 style="color:var(--red);">No Revision</h4>
+        <p style="font-size:14px; margin-top:8px;">Each token is final. No backtracking. The model commits to an answer before it understands the full problem.</p>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,212,255,0.15);">
+          <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:1px; margin-bottom:4px;">SLICK V3</div>
+          <p style="font-size:12px; color:var(--accent); margin:0;">GDiT iteratively unmasks - revises uncertain cells, keeps confident ones. 5 refinement steps with metacognitive re-masking.</p>
+        </div>
+      </div>
+      <div class="card text-center" style="padding-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:16px;">🧊</div>
+        <h4 style="color:var(--red);">No Internal State</h4>
+        <p style="font-size:14px; margin-top:8px;">Every prompt is processed identically. No curiosity, no doubt, no confidence. Human cognition is state-driven - LLMs have no inner life.</p>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,212,255,0.15);">
+          <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:1px; margin-bottom:4px;">SLICK V3</div>
+          <p style="font-size:12px; color:var(--accent); margin:0;">72-dim biological state engine. Emotions modulate attention, route to different artificial nuclei, and drive reasoning strategy in real-time.</p>
+        </div>
+      </div>
+      <div class="card text-center" style="padding-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:16px;">🧠</div>
+        <h4 style="color:var(--red);">No Mental Simulation</h4>
+        <p style="font-size:14px; margin-top:8px;">Humans imagine outcomes before acting. LLMs can't "try it in their head" first. No world model, no rehearsal, no imagination.</p>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,212,255,0.15);">
+          <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:1px; margin-bottom:4px;">SLICK V3</div>
+          <p style="font-size:12px; color:var(--accent); margin:0;">Diffusion world model simulates outcomes in ~5ms before acting. Two-fidelity denoising: fast blurry preview to filter bad plans, then precise execution.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-grid cols-3 mt-12">
+      <div class="card text-center" style="padding-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:16px;">🔌</div>
+        <h4 style="color:var(--red);">No Modularity</h4>
+        <p style="font-size:14px; margin-top:8px;">Monolithic models. Adding vision, memory, or new skills requires retraining the entire network from scratch. Billions of dollars per iteration.</p>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,212,255,0.15);">
+          <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:1px; margin-bottom:4px;">SLICK V3</div>
+          <p style="font-size:12px; color:var(--accent); margin:0;">Engram Neural Fabric (HULLHB). Artificial nuclei train independently and hot-plug. Add vision, OCR, or code skills without touching the base model.</p>
+        </div>
+      </div>
+      <div class="card text-center" style="padding-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:16px;">💀</div>
+        <h4 style="color:var(--red);">No Memory</h4>
+        <p style="font-size:14px; margin-top:8px;">Every conversation starts from zero. No persistent identity, no accumulated knowledge, no relationship with the user. Context window is the ceiling.</p>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,212,255,0.15);">
+          <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:1px; margin-bottom:4px;">SLICK V3</div>
+          <p style="font-size:12px; color:var(--accent); margin:0;">Artificial Hippocampus with 970+ semantic memories. Reflexive associative recall fires automatically. Persistent identity across sessions.</p>
+        </div>
+      </div>
+      <div class="card text-center" style="padding-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:16px;">🎯</div>
+        <h4 style="color:var(--red);">No Self-Correction</h4>
+        <p style="font-size:14px; margin-top:8px;">When an LLM makes a mistake mid-output, it can't detect or fix it. No error awareness, no re-evaluation, no "wait, that's wrong."</p>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,212,255,0.15);">
+          <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:1px; margin-bottom:4px;">SLICK V3</div>
+          <p style="font-size:12px; color:var(--accent); margin:0;">Artificial Anterior Cingulate detects errors mid-thought. Metacognition nuclei verify each step, re-mask suspicious outputs, and re-reason.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 3: THE SOLUTION -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-radial-purple" data-slide="4">
+  <div class="text-center full-width">
+    <div class="label mb-16">OUR SOLUTION</div>
+    <h2><span class="gradient-text">Diffusion + Transformers</span> = General Reasoning</h2>
+    <p class="mt-16" style="margin:16px auto;">
+      Human reasoning isn't sequential - it's iterative. We form rough hypotheses, test them mentally,<br>
+      revise what doesn't work, and converge on answers. <strong style="color:var(--text);">Engram is the first architecture that does this.</strong>
+    </p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1000px; margin:48px auto 0; align-items:start;">
+      <!-- LEFT: Status Quo -->
+      <div>
+        <div style="text-align:center; margin-bottom:16px; padding:10px 0 12px; border-bottom:2px solid rgba(239,68,68,0.3);">
+          <h3 style="font-size:20px; font-weight:800; color:var(--red); letter-spacing:1px; margin:0;">Autoregressive (GPT-4, Gemini)</h3>
+        </div>
+        <div class="card" style="border-color:var(--red); position:relative;">
+          <span class="novel-badge" style="background:rgba(239,68,68,0.15); color:var(--red); position:absolute; top:16px; right:16px;">STATUS QUO</span>
+          <div style="font-family:'JetBrains Mono'; font-size:13px; color:var(--muted); line-height:1.8;">
+            Token 1 → Token 2 → Token 3 → ... → Token N<br>
+            <span style="color:var(--red);">Each token is FINAL. No revision.</span><br>
+            <span style="color:var(--red);">Commits before understanding.</span><br>
+            <span style="color:var(--dim);">Fundamental ceiling on reasoning.<br>Scale won't fix the architecture.</span>
+          </div>
+        </div>
+      </div>
+      <!-- RIGHT: Engram -->
+      <div>
+        <div style="text-align:center; margin-bottom:16px; padding:10px 0 12px; border-bottom:2px solid rgba(0,212,255,0.3);">
+          <h3 style="font-size:20px; font-weight:800; color:var(--accent); letter-spacing:1px; margin:0;">Iterative Diffusion Reasoning</h3>
+        </div>
+        <div class="card glow" style="border-color:var(--accent);">
+          <span class="novel-badge" style="background:rgba(0,212,255,0.15); color:var(--accent); position:absolute; top:16px; right:16px;">ENGRAM</span>
+          <div style="font-family:'JetBrains Mono'; font-size:13px; color:var(--muted); line-height:1.8;">
+            [???] → [hypothesis] → [test] → [revise] → [answer]<br>
+            <span style="color:var(--accent);">Sees the WHOLE problem at once.</span><br>
+            <span style="color:var(--accent);">Revises uncertain parts, keeps confident ones.</span><br>
+            <span style="color:var(--text);">This is how humans reason:<br>hypothesize, simulate, refine, converge.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-32" style="max-width:800px; margin:32px auto 0; border-color:var(--green); background:rgba(16,185,129,0.05);">
+      <p style="font-size:16px; color:var(--text); text-align:center; margin:0;">
+        <strong style="color:var(--green);">The paradigm shift:</strong> We apply Stable Diffusion's denoising math to problem solving, not image generation.
+        <br>The architecture generalizes to <strong>any structured reasoning task</strong> - code, math, planning, construction logistics, defense analysis, embodied AI.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 4: WHAT'S NOVEL - MULTI-SLIDE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="5">
+  <div class="full-width">
+    <div class="label mb-16">BREAKTHROUGHS</div>
+    <h2>Six Architectural Breakthroughs, <span class="accent">One Unified System</span></h2>
+    <p style="font-size:14px; color:var(--muted); margin-top:4px; max-width:900px;">Each addresses a fundamental limitation of current AI. Together, they form the Cognitive Mesh.</p>
+
+    <div class="card-grid cols-3 mt-24" style="max-width:1200px;">
+      <div class="card" style="border-left: 3px solid var(--accent); padding:20px;">
+        <span class="novel-badge" style="background:rgba(0,212,255,0.15); color:var(--accent); display:inline-block; margin-bottom:8px;">1</span>
+        <h4 style="font-size:15px;">Diffusion for Reasoning</h4>
+        <p style="font-size:12px; margin-top:6px; line-height:1.5;">Apply Stable Diffusion's denoising math to <em>abstract reasoning</em>, not image generation. Iterative refinement over discrete grids - the model sees the whole problem, forms hypotheses, and revises. 5 steps, not 50. 65M params, not 1.5B.</p>
+        <div style="font-size:10px; color:var(--accent); margin-top:8px;">Grid Diffusion Transformer (GDiT)</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--accent2); padding:20px;">
+        <span class="novel-badge" style="background:rgba(99,102,241,0.15); color:var(--accent2); display:inline-block; margin-bottom:8px;">2</span>
+        <h4 style="font-size:15px;">Library Learning</h4>
+        <p style="font-size:12px; margin-top:6px; line-height:1.5;">Overfit parts, not problems. MoE experts memorize reusable primitives - geometric transforms, logical operations, structural patterns. The router learns to <em>compose</em> memorized fragments into novel solutions. Like a chess master: openings are memorized, combinations are reasoned.</p>
+        <div style="font-size:10px; color:var(--accent2); margin-top:8px;">DreamCoder meets MoE</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--accent3); padding:20px;">
+        <span class="novel-badge" style="background:rgba(139,92,246,0.15); color:var(--accent3); display:inline-block; margin-bottom:8px;">3</span>
+        <h4 style="font-size:15px;">Continuous Metacognition</h4>
+        <p style="font-size:12px; margin-top:6px; line-height:1.5;">Whole-board check after <em>every</em> step, not just at the end. A process reward model evaluates each action in context. Confidence drops trigger re-routing. The system doesn't wait to fail - it catches mistakes mid-thought, like human peripheral awareness.</p>
+        <div style="font-size:10px; color:var(--accent3); margin-top:8px;">Process Reward Models + self-monitoring</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--green); padding:20px;">
+        <span class="novel-badge" style="background:rgba(16,185,129,0.15); color:var(--green); display:inline-block; margin-bottom:8px;">4</span>
+        <h4 style="font-size:15px;">Mental Simulation</h4>
+        <p style="font-size:12px; margin-top:6px; line-height:1.5;">Humans daydream solutions before committing. The model imagines outcomes via low-fidelity denoising - "what if I rotate then tile?" Clear imagined result = confident, proceed. Blurry result = uncertain, try something else. No separate critic needed.</p>
+        <div style="font-size:10px; color:var(--green); margin-top:8px;">World Model via inner diffusion</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--orange); padding:20px;">
+        <span class="novel-badge" style="background:rgba(245,158,11,0.15); color:var(--orange); display:inline-block; margin-bottom:8px;">5</span>
+        <h4 style="font-size:15px;">Diffusion Within Diffusion</h4>
+        <p style="font-size:12px; margin-top:6px; line-height:1.5;">The same GDiT serves as both output generator (5 steps, full fidelity) AND imagination engine (2-3 steps, approximate). Inner diffusion for mental simulation, outer diffusion for real output. One architecture, two roles. Confidence emerges from denoising quality itself.</p>
+        <div style="font-size:10px; color:var(--orange); margin-top:8px;">Unified inner/outer reasoning</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--pink); padding:20px;">
+        <span class="novel-badge" style="background:rgba(236,72,153,0.15); color:var(--pink); display:inline-block; margin-bottom:8px;">6</span>
+        <h4 style="font-size:15px;">Biological State Engine</h4>
+        <p style="font-size:12px; margin-top:6px; line-height:1.5;">72-dim internal state modulates every computation via FiLM conditioning. 8 hierarchical layers mirroring human neuropsychology. Curiosity increases exploration, confidence sharpens predictions. State changes <em>how the model reasons</em>, not just what it says.</p>
+        <div style="font-size:10px; color:var(--pink); margin-top:8px;">Bio-inspired cognitive modulation</div>
+      </div>
+    </div>
+
+    <div class="card mt-16" style="max-width:1200px; border-color:var(--accent); background:rgba(0,212,255,0.03); text-align:center;">
+      <p style="font-size:14px; color:var(--text); margin:0;">
+        <strong style="color:var(--accent);">The unification:</strong> Memorized primitives (1) composed by an expert router, generated through iterative diffusion (2), verified at every step by metacognition (3), evaluated by mental simulation (4) that itself runs via inner diffusion (5), all modulated by biological state (6).
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 5: HOW IT THINKS - INTERACTIVE EXPLAINER -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="6" id="explainer-slide" style="overflow:hidden;">
+  <div class="full-width" style="height:100%; display:flex; flex-direction:column;">
+
+    <!-- Header -->
+    <div class="text-center" style="flex:0 0 auto;">
+      <div class="label mb-16">HOW ENGRAM THINKS</div>
+      <h2 style="font-size:28px;">The Reasoning Pipeline - <span class="gradient-text" id="explainer-title">Step 1: Set the Mood</span></h2>
+    </div>
+
+    <!-- Sub-page container -->
+    <div style="flex:1; position:relative; overflow:hidden; margin-top:8px;">
+
+      <!-- ── PAGE 1: Biological State Engine ── -->
+      <div class="explainer-page active" data-page="0">
+        <div class="arch-mini">
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--green);">STATE<span class="arch-mini-sub">72-dim FiLM</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">PERCEIVE<span class="arch-mini-sub">vision + DSL</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">BACKBONE<span class="arch-mini-sub">transformer</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">EXPERTS<span class="arch-mini-sub">MoE top-2</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">GDiT<span class="arch-mini-sub">diffusion</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">OUTPUT</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px; margin:0 auto; align-items:stretch;">
+          <div class="card" style="border-color:var(--green);">
+            <h4 style="color:var(--green); margin-bottom:12px;">Biological State Engine</h4>
+            <p style="font-size:15px; line-height:1.7;">
+              Think about how <em>you</em> solve problems differently depending on your mood. When you're curious, you explore more options. When you're confident, you commit faster. When you're frustrated, you try completely different approaches.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              Engram has an internal state - a 72-dimensional vector organized into 8 layers, mirroring human neuropsychology. Drives, emotions, confidence, curiosity - these aren't labels, they're <strong>numbers that change how every computation works</strong> via a technique called <em>FiLM conditioning</em>.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              Before tackling any problem, the state engine sets the cognitive context. No other AI architecture has this.
+            </p>
+          </div>
+          <div class="card" style="border-color:var(--dim); background:rgba(16,185,129,0.03);">
+            <div style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">The Analogy</div>
+            <p style="font-size:22px; line-height:1.5; color:var(--text);">
+              GPT is a student who takes every test with the exact same blank expression.
+            </p>
+            <p style="font-size:22px; line-height:1.5; color:var(--accent); margin-top:12px;">
+              Engram is a student whose focus sharpens when the problem gets hard.
+            </p>
+            <div style="margin-top:20px; padding:16px; border-radius:8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2);">
+              <div style="font-size:12px; color:var(--green); font-weight:600; margin-bottom:8px;">MATH &amp; RESEARCH</div>
+              <div style="font-family:'JetBrains Mono'; font-size:13px; color:var(--accent); text-align:center; padding:8px; background:rgba(16,185,129,0.06); border-radius:4px; margin-bottom:8px;">y = &gamma;(state) &middot; x + &beta;(state)</div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6;">FiLM conditioning (Perez et al., 2018) + Kahneman's System 1/System 2 theory (2011). 8 biological layers modulate every transformer layer. No other architecture has internal cognitive state.</div>
+              <div style="font-size:10px; color:var(--dim); margin-top:6px; font-style:italic;">Paper: "FiLM: Visual Reasoning with a General Conditioning Layer" - Perez et al.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE 2: Library Learning ── -->
+      <div class="explainer-page" data-page="1">
+        <div class="arch-mini">
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--green);">STATE<span class="arch-mini-sub">72-dim FiLM</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">PERCEIVE<span class="arch-mini-sub">vision + DSL</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">BACKBONE<span class="arch-mini-sub">transformer</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--accent2);">&#9654;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--accent2);">EXPERTS<span class="arch-mini-sub">MoE top-2</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">GDiT<span class="arch-mini-sub">diffusion</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">OUTPUT</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px; margin:0 auto; align-items:stretch;">
+          <div class="card" style="border-color:var(--accent2);">
+            <h4 style="color:var(--accent2); margin-bottom:12px;">Library Learning</h4>
+            <p style="font-size:15px; line-height:1.7;">
+              Imagine you have a box of LEGO instruction booklets - one for building a wheel, one for a wall, one for a roof. You've memorized them all. Now someone asks you to build a castle you've never seen before.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              You don't need instructions for "castle." You combine the wall booklet, the roof booklet, and improvise the rest. <strong>The building blocks are memorized. The combination is reasoned.</strong>
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              Engram uses <em>Mixture-of-Experts</em> (MoE) - 16 specialist sub-networks that each memorize different types of operations. A <em>router</em> learns which experts to combine for each new problem. Like DreamCoder (MIT) meets MoE.
+            </p>
+          </div>
+          <div class="card" style="border-color:var(--dim); background:rgba(99,102,241,0.03);">
+            <div style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">The Analogy</div>
+            <p style="font-size:22px; line-height:1.5; color:var(--text);">
+              GPT memorizes entire castles. Show it a new one and it's lost.
+            </p>
+            <p style="font-size:22px; line-height:1.5; color:var(--accent2); margin-top:12px;">
+              Engram memorizes bricks and learns to build anything.
+            </p>
+            <div style="margin-top:20px; padding:16px; border-radius:8px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2);">
+              <div style="font-size:12px; color:var(--accent2); font-weight:600; margin-bottom:8px;">MATH &amp; RESEARCH</div>
+              <div style="font-family:'JetBrains Mono'; font-size:13px; color:var(--accent); text-align:center; padding:8px; background:rgba(99,102,241,0.06); border-radius:4px; margin-bottom:8px;">y = &Sigma;<sub>k</sub> G(x)<sub>k</sub> &middot; E<sub>k</sub>(x) &emsp; top-2 of 16</div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6;">Inspired by DreamCoder (Ellis et al., ICML 2021 Best Paper) - library learning for program synthesis. MoE gating selects expert combinations. New tasks = new expert compositions, zero retraining.</div>
+              <div style="font-size:10px; color:var(--dim); margin-top:6px; font-style:italic;">Paper: "Bootstrapping Inductive Program Synthesis with Wake-Sleep Library Learning" - Ellis et al.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE 3: GDiT Diffusion Reasoning ── -->
+      <div class="explainer-page" data-page="2">
+        <div class="arch-mini">
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--green);">STATE<span class="arch-mini-sub">72-dim FiLM</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent);">PERCEIVE<span class="arch-mini-sub">vision + DSL</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">BACKBONE<span class="arch-mini-sub">transformer</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">EXPERTS<span class="arch-mini-sub">MoE top-2</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--accent);">&#9654;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--accent);">GDiT<span class="arch-mini-sub">diffusion</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box">OUTPUT</div>
+        </div>
+
+        <!-- ═══ GDiT ENGINE BLUEPRINT ═══ -->
+        <div style="max-width:1100px; width:100%; margin:0 auto;">
+          <svg viewBox="0 0 1100 420" style="width:100%; height:auto; display:block;">
+            <defs>
+              <filter id="eng-glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="eng-glow-sm" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <marker id="ea" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#00d4ff" opacity="0.6"/></marker>
+              <marker id="ea-g" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#10b981" opacity="0.6"/></marker>
+              <marker id="ea-p" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#ec4899" opacity="0.5"/></marker>
+              <marker id="ea-o" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f59e0b" opacity="0.5"/></marker>
+              <radialGradient id="core-glow" cx="50%" cy="50%"><stop offset="0%" stop-color="#00d4ff" stop-opacity="0.08"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+              <!-- Dot grid background -->
+              <pattern id="dots2" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="0.6" fill="#1e293b" opacity="0.4"/></pattern>
+            </defs>
+            <rect width="1100" height="420" fill="#060810" rx="12"/>
+            <rect width="1100" height="420" fill="url(#dots2)" rx="12"/>
+
+            <!-- ═══ TITLE ═══ -->
+            <text x="550" y="28" fill="#00d4ff" font-size="15" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" letter-spacing="2">GRID DIFFUSION TRANSFORMER</text>
+            <text x="550" y="44" fill="#475569" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">The Reasoning Engine - iterative refinement instead of left-to-right commitment</text>
+
+            <!-- ═══ CENTRAL ENGINE - Rounded hexagonal shape ═══ -->
+            <ellipse cx="550" cy="220" rx="300" ry="155" fill="url(#core-glow)"/>
+            <rect x="260" y="70" width="580" height="300" rx="30" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.3"/>
+            <rect x="260" y="70" width="580" height="300" rx="30" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.12" filter="url(#eng-glow)"/>
+
+            <!-- ═══ ENGINE LABEL ═══ -->
+            <rect x="460" y="58" width="180" height="24" rx="12" fill="#060810" stroke="#00d4ff" stroke-width="1.5"/>
+            <text x="550" y="74" fill="#00d4ff" font-size="10" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="700">GDiT ENGINE &middot; 15M params</text>
+
+            <!-- ═══ INPUT: Masked Grid (left side) ═══ -->
+            <g transform="translate(42, 140)">
+              <rect x="0" y="0" width="100" height="100" rx="8" fill="#0c0e15" stroke="#334155" stroke-width="1.5"/>
+              <!-- Mini masked grid -->
+              <rect x="6" y="6" width="18" height="18" rx="2" fill="#1a1a2e"/><text x="15" y="19" fill="#334155" font-size="9" text-anchor="middle" font-family="monospace">?</text>
+              <rect x="27" y="6" width="18" height="18" rx="2" fill="#1a1a2e"/><text x="36" y="19" fill="#334155" font-size="9" text-anchor="middle" font-family="monospace">?</text>
+              <rect x="48" y="6" width="18" height="18" rx="2" fill="#1a1a2e"/><text x="57" y="19" fill="#334155" font-size="9" text-anchor="middle" font-family="monospace">?</text>
+              <rect x="69" y="6" width="18" height="18" rx="2" fill="#1a1a2e"/><text x="78" y="19" fill="#334155" font-size="9" text-anchor="middle" font-family="monospace">?</text>
+              <rect x="6" y="27" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="27" y="27" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="48" y="27" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="69" y="27" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="6" y="48" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="27" y="48" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="48" y="48" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="69" y="48" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="6" y="69" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="27" y="69" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="48" y="69" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <rect x="69" y="69" width="18" height="18" rx="2" fill="#1a1a2e"/>
+              <text x="50" y="112" fill="#64748b" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">MASKED INPUT</text>
+              <text x="50" y="124" fill="#334155" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">100% [MASK]</text>
+            </g>
+            <!-- Arrow: Input → Engine -->
+            <line x1="150" y1="190" x2="258" y2="190" stroke="#00d4ff" stroke-width="1.5" opacity="0.5" marker-end="url(#ea)"/>
+            <text x="204" y="183" fill="#00d4ff" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace" opacity="0.6">feed</text>
+
+            <!-- ═══ OUTPUT: Solved Grid (right side) ═══ -->
+            <g transform="translate(958, 140)" filter="url(#eng-glow-sm)">
+              <rect x="0" y="0" width="100" height="100" rx="8" fill="#0c0e15" stroke="#10b981" stroke-width="2"/>
+              <rect x="6" y="6" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="15" y="19" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">2</text>
+              <rect x="27" y="6" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="36" y="19" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">3</text>
+              <rect x="48" y="6" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="57" y="19" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">1</text>
+              <rect x="69" y="6" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="78" y="19" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">0</text>
+              <rect x="6" y="27" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="15" y="40" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">7</text>
+              <rect x="27" y="27" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="36" y="40" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">7</text>
+              <rect x="48" y="27" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="57" y="40" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">4</text>
+              <rect x="69" y="27" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="78" y="40" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">5</text>
+              <rect x="6" y="48" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="15" y="61" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">9</text>
+              <rect x="27" y="48" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="36" y="61" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">3</text>
+              <rect x="48" y="48" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="57" y="61" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">6</text>
+              <rect x="69" y="48" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="78" y="61" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">1</text>
+              <rect x="6" y="69" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="15" y="82" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">0</text>
+              <rect x="27" y="69" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="36" y="82" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">8</text>
+              <rect x="48" y="69" width="18" height="18" rx="2" fill="rgba(0,212,255,0.2)"/><text x="57" y="82" fill="#00d4ff" font-size="9" text-anchor="middle" font-weight="700">2</text>
+              <rect x="69" y="69" width="18" height="18" rx="2" fill="rgba(16,185,129,0.3)"/><text x="78" y="82" fill="#10b981" font-size="9" text-anchor="middle" font-weight="700">5</text>
+              <text x="50" y="112" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">SOLVED</text>
+              <text x="50" y="124" fill="#10b981" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">~80ms total</text>
+            </g>
+            <!-- Arrow: Engine → Output -->
+            <line x1="842" y1="190" x2="955" y2="190" stroke="#10b981" stroke-width="1.5" opacity="0.5" marker-end="url(#ea-g)"/>
+            <text x="898" y="183" fill="#10b981" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace" opacity="0.6">emit</text>
+
+            <!-- ═══ INSIDE THE ENGINE - 5 Internal Components ═══ -->
+
+            <!-- Component 1: BIDIRECTIONAL SELF-ATTENTION -->
+            <g>
+              <rect x="290" y="95" width="160" height="55" rx="12" fill="#0a0f18" stroke="#6366f1" stroke-width="1.5"/>
+              <text x="370" y="115" fill="#6366f1" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">BIDIRECTIONAL ATTENTION</text>
+              <text x="370" y="128" fill="#64748b" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">Every cell sees every cell</text>
+              <text x="370" y="140" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">Not left-to-right - ALL at once</text>
+            </g>
+
+            <!-- Component 2: 2D POSITION BIAS -->
+            <g>
+              <rect x="480" y="95" width="160" height="55" rx="12" fill="#0a0f18" stroke="#8b5cf6" stroke-width="1.5"/>
+              <text x="560" y="115" fill="#8b5cf6" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">2D POSITION BIAS</text>
+              <text x="560" y="128" fill="#64748b" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">Native spatial awareness</text>
+              <text x="560" y="140" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">Knows (row, col) natively</text>
+            </g>
+
+            <!-- Component 3: CROSS-ATTENTION TO EXAMPLES -->
+            <g>
+              <rect x="670" y="95" width="155" height="55" rx="12" fill="#0a0f18" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="747" y="115" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">EXAMPLE ENCODER</text>
+              <text x="747" y="128" fill="#64748b" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">Learns the rule from</text>
+              <text x="747" y="140" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">2-5 input/output pairs</text>
+            </g>
+
+            <!-- Component 4: FiLM + STATE CONDITIONING (bottom left) -->
+            <g>
+              <rect x="290" y="230" width="160" height="55" rx="12" fill="#0a0f18" stroke="#10b981" stroke-width="1.5"/>
+              <text x="370" y="250" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">STATE CONDITIONING</text>
+              <text x="370" y="263" fill="#64748b" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">&gamma;(state) &middot; x + &beta;(state)</text>
+              <text x="370" y="276" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">72-dim FiLM modulation</text>
+            </g>
+
+            <!-- Component 5: MoE DENOISER (center) -->
+            <g>
+              <rect x="480" y="230" width="160" height="55" rx="12" fill="#0a0f18" stroke="#00d4ff" stroke-width="2"/>
+              <rect x="480" y="230" width="160" height="55" rx="12" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.15" filter="url(#eng-glow-sm)"/>
+              <text x="560" y="250" fill="#00d4ff" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">MoE DENOISER</text>
+              <text x="560" y="263" fill="#9ca3af" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">8 experts &middot; top-2 routing</text>
+              <text x="560" y="276" fill="#9ca3af" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">Predict: P(color | cell)</text>
+            </g>
+
+            <!-- Component 6: CONFIDENCE GATE (bottom right) -->
+            <g>
+              <rect x="670" y="230" width="155" height="55" rx="12" fill="#0a0f18" stroke="#ec4899" stroke-width="1.5"/>
+              <text x="747" y="250" fill="#ec4899" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">CONFIDENCE GATE</text>
+              <text x="747" y="263" fill="#64748b" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">P &gt; &tau; &rarr; unmask cell</text>
+              <text x="747" y="276" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">P &lt; &tau; &rarr; re-mask &amp; retry</text>
+            </g>
+
+            <!-- ═══ CONNECTIONS BETWEEN COMPONENTS ═══ -->
+            <!-- Attention → Denoiser -->
+            <line x1="370" y1="150" x2="370" y2="170" stroke="#6366f1" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+            <line x1="370" y1="170" x2="520" y2="228" stroke="#6366f1" stroke-width="1" stroke-dasharray="3,3" opacity="0.3"/>
+            <!-- 2D Pos → Denoiser -->
+            <line x1="560" y1="150" x2="560" y2="228" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+            <!-- Examples → Denoiser -->
+            <line x1="747" y1="150" x2="747" y2="170" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+            <line x1="747" y1="170" x2="600" y2="228" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" opacity="0.3"/>
+            <!-- State → Denoiser -->
+            <line x1="450" y1="257" x2="478" y2="257" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" opacity="0.4" marker-end="url(#ea-g)"/>
+            <!-- Denoiser → Confidence -->
+            <line x1="640" y1="257" x2="668" y2="257" stroke="#00d4ff" stroke-width="1.5" opacity="0.5" marker-end="url(#ea)"/>
+
+            <!-- ═══ ITERATION LOOP - The killer feature ═══ -->
+            <path d="M747,287 C747,330 680,350 550,350 C420,350 350,330 370,290" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="5,4" fill="none" opacity="0.4" marker-end="url(#ea-p)"/>
+            <text x="550" y="345" fill="#ec4899" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="600" opacity="0.7">ITERATE &times; 5 STEPS</text>
+            <text x="550" y="358" fill="#475569" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">unmask confident &rarr; re-mask uncertain &rarr; repeat until solved</text>
+            <!-- Animated particle on loop -->
+            <circle r="3" fill="#ec4899" opacity="0">
+              <animateMotion path="M747,287 C747,330 680,350 550,350 C420,350 350,330 370,290" dur="3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.8;0.8;0" dur="3s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- ═══ STATE INPUT (bottom-left, outside engine) ═══ -->
+            <g transform="translate(42, 280)">
+              <rect x="0" y="0" width="100" height="36" rx="8" fill="#0a0f18" stroke="#10b981" stroke-width="1"/>
+              <text x="50" y="16" fill="#10b981" font-size="8" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">72-DIM STATE</text>
+              <text x="50" y="28" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">confidence, focus...</text>
+            </g>
+            <line x1="144" y1="298" x2="288" y2="257" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" opacity="0.35" marker-end="url(#ea-g)"/>
+
+            <!-- ═══ EXAMPLES INPUT (top, outside engine) ═══ -->
+            <g transform="translate(710, 20)">
+              <rect x="0" y="0" width="115" height="36" rx="8" fill="#0a0f18" stroke="#f59e0b" stroke-width="1"/>
+              <text x="57" y="16" fill="#f59e0b" font-size="8" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">EXAMPLE PAIRS</text>
+              <text x="57" y="28" fill="#475569" font-size="7" text-anchor="middle" font-family="JetBrains Mono,monospace">2-5 (in,out) grids</text>
+            </g>
+            <line x1="767" y1="58" x2="747" y2="93" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3" opacity="0.35" marker-end="url(#ea-o)"/>
+
+            <!-- ═══ VS GPT - Corner callout ═══ -->
+            <g transform="translate(42, 20)">
+              <rect x="0" y="0" width="145" height="70" rx="8" fill="#0a0f18" stroke="#1e293b" stroke-width="1"/>
+              <text x="72" y="16" fill="#ef4444" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">GPT: LEFT &rarr; RIGHT</text>
+              <text x="72" y="30" fill="#475569" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">Each word is final. No eraser.</text>
+              <text x="72" y="42" fill="#475569" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">1D serial. Flattens grids.</text>
+              <line x1="10" y1="48" x2="135" y2="48" stroke="#1e293b" stroke-width="1"/>
+              <text x="72" y="60" fill="#00d4ff" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">GDiT: ALL AT ONCE</text>
+              <text x="72" y="72" fill="#00d4ff" font-size="7" text-anchor="middle" font-family="Inter,sans-serif" opacity="0.7">Refine iteratively. 2D native.</text>
+            </g>
+
+            <!-- ═══ RESEARCH FOOTER ═══ -->
+            <rect x="100" y="385" width="900" height="28" rx="6" fill="rgba(0,212,255,0.04)" stroke="rgba(0,212,255,0.12)" stroke-width="1"/>
+            <text x="120" y="403" fill="#00d4ff" font-size="8" font-family="JetBrains Mono,monospace" font-weight="600">RESEARCH:</text>
+            <text x="200" y="403" fill="#64748b" font-size="8" font-family="Inter,sans-serif">DiT (Peebles &amp; Xie, 2023) &middot; MDLM (Sahoo, 2024) &middot; MaskGIT (Chang, 2022) &middot;</text>
+            <text x="685" y="403" fill="#e2e8f0" font-size="8" font-family="Inter,sans-serif" font-weight="600">NOVEL: First discrete diffusion for abstract reasoning</text>
+
+            <!-- Animated data particle flowing through engine -->
+            <circle r="3" fill="#00d4ff" opacity="0">
+              <animateMotion path="M150,190 L260,190 L370,130 L560,130 L747,130 L560,260 L747,260 L845,190 L958,190" dur="5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.9;0.9;0.9;0.9;0.9;0.9;0.9;0" dur="5s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+
+        <!-- Explanation + Analogy below the engine -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1100px; margin:16px auto 0;">
+          <div style="padding:16px 20px; border-radius:10px; border:1px solid rgba(0,212,255,0.15); background:rgba(0,212,255,0.03);">
+            <div style="font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:600;">What It Does</div>
+            <p style="font-size:13px; line-height:1.6; color:var(--muted); margin:0;">
+              Instead of predicting one token at a time (like GPT), the GDiT starts with a <strong style="color:var(--text);">fully masked grid</strong> and iteratively reveals cells in order of confidence. High-confidence cells lock in first. Uncertain cells get re-masked and retried. The same architecture doubles as a <strong style="color:var(--accent);">world model</strong> - run fewer steps for a quick mental preview, more steps for the final answer.
+            </p>
+          </div>
+          <div style="padding:16px 20px; border-radius:10px; border:1px solid rgba(0,212,255,0.15); background:rgba(0,212,255,0.03);">
+            <div style="font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:600;">The Analogy</div>
+            <p style="font-size:15px; line-height:1.5; color:var(--text); margin:0;">
+              GPT writes an essay left to right. <span style="color:var(--red);">No eraser.</span>
+            </p>
+            <p style="font-size:15px; line-height:1.5; color:var(--accent); margin:8px 0 0 0;">
+              Engram sketches the whole answer, then refines - like an artist, not a typewriter.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE 4: Mental Simulation ── -->
+      <div class="explainer-page" data-page="3">
+        <div class="arch-mini">
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--green);">STATE<span class="arch-mini-sub">72-dim FiLM</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent);">PERCEIVE<span class="arch-mini-sub">vision + DSL</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">BACKBONE<span class="arch-mini-sub">transformer</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">EXPERTS<span class="arch-mini-sub">MoE top-2</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent);">GDiT<span class="arch-mini-sub">diffusion</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--orange);">&#x21BB;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--orange);">IMAGINE<span class="arch-mini-sub">2-3 step sim</span></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px; margin:0 auto; align-items:stretch;">
+          <div class="card" style="border-color:var(--orange);">
+            <h4 style="color:var(--orange); margin-bottom:12px;">Mental Simulation</h4>
+            <p style="font-size:15px; line-height:1.7;">
+              Before a chess player makes a move, they imagine what happens next. "If I move the knight here, they'll take my bishop, then I'll..." This preview is quick, rough, and often wrong - but it's enough to avoid obvious mistakes.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              Engram does the same thing: before committing to an answer, it runs a <strong>quick, low-fidelity simulation</strong> - just 2-3 diffusion steps instead of the usual 5. The result is blurry, but if even the blurry version looks wrong, the model knows to try something else.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              Inspired by Yann LeCun's JEPA (Joint Embedding Predictive Architecture) and DeepMind's Dreamer - the idea that intelligence requires <em>imagination</em>, not just reaction.
+            </p>
+          </div>
+          <div class="card" style="border-color:var(--dim); background:rgba(245,158,11,0.03);">
+            <div style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">The Analogy</div>
+            <p style="font-size:22px; line-height:1.5; color:var(--text);">
+              GPT commits first, checks later.
+            </p>
+            <p style="font-size:22px; line-height:1.5; color:var(--orange); margin-top:12px;">
+              Engram daydreams the outcome first - "nah, that won't work" - then pivots.
+            </p>
+            <div style="margin-top:20px; padding:16px; border-radius:8px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2);">
+              <div style="font-size:12px; color:var(--orange); font-weight:600; margin-bottom:8px;">MATH &amp; RESEARCH</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--orange); margin-bottom:8px;">conf(x) = 1 - H(p_θ(x̂|x_noisy, t=2))<br>simulate → score → commit or pivot</div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6;"><strong>JEPA</strong> (LeCun, Meta 2022) - "Predict in abstract representation space rather than pixel space." <strong>MuZero</strong> (Schrittwieser et al., DeepMind 2020) - learned world model for planning without environment rules. <strong>Dreamer</strong> (Hafner et al., 2019-2023) - imagine trajectories, learn from dreams.</div>
+              <div style="font-size:12px; color:var(--orange); margin-top:6px; font-style:italic;">"The fact that you described LeCun's central thesis as 'daydreaming and a voice that says nah that's bs' is... honestly, a better explanation than his 60-page paper."</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE 5: Continuous Metacognition ── -->
+      <div class="explainer-page" data-page="4">
+        <div class="arch-mini">
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--green);">STATE<span class="arch-mini-sub">72-dim FiLM</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent);">PERCEIVE<span class="arch-mini-sub">vision + DSL</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">BACKBONE<span class="arch-mini-sub">transformer</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">EXPERTS<span class="arch-mini-sub">MoE top-2</span></div>
+          <div class="arch-mini-arrow">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent);">GDiT<span class="arch-mini-sub">diffusion</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--pink);">&#x21BB;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--pink);">CHECK<span class="arch-mini-sub">PRM re-mask</span></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px; margin:0 auto; align-items:stretch;">
+          <div class="card" style="border-color:var(--pink);">
+            <h4 style="color:var(--pink); margin-bottom:12px;">Continuous Metacognition</h4>
+            <p style="font-size:15px; line-height:1.7;">
+              Most AI systems work like a student who only checks their answer when they hand in the exam. If they made a mistake on line 3, they won't catch it until they've built 50 lines on top of it.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              Engram checks after <em>every single step</em>. A built-in Process Reward Model (PRM) monitors every intermediate result and asks: "Does this still make sense? Am I getting warmer or colder?" If confidence drops, it re-masks uncertain tokens and tries again.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              This is "whole-board checking" - stepping back to see the full picture, continuously, not just at the end.
+            </p>
+          </div>
+          <div class="card" style="border-color:var(--dim); background:rgba(236,72,153,0.03);">
+            <div style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">The Analogy</div>
+            <p style="font-size:22px; line-height:1.5; color:var(--text);">
+              GPT checks its work at the very end. By then it's too late.
+            </p>
+            <p style="font-size:22px; line-height:1.5; color:var(--pink); margin-top:12px;">
+              Engram steps back and looks at the whole board after every move.
+            </p>
+            <div style="margin-top:20px; padding:16px; border-radius:8px; background:rgba(236,72,153,0.08); border:1px solid rgba(236,72,153,0.2);">
+              <div style="font-size:12px; color:var(--pink); font-weight:600; margin-bottom:8px;">MATH &amp; RESEARCH</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--pink); margin-bottom:8px;">R(step_t) = PRM(x_t, target)<br>if R &lt; τ → re-mask low-confidence tokens</div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6;"><strong>Process Reward Models</strong> (Lightman et al., OpenAI 2023) - reward each intermediate step, not just the final answer. <strong>ReAct</strong> (Yao et al., 2023) - interleave reasoning and action. Kahneman's System 1/System 2 - fast pattern matching + slow deliberate verification.</div>
+              <div style="font-size:12px; color:var(--pink); margin-top:6px; font-style:italic;">The "critical missing piece" - continuous verification, not post-hoc checking.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE 6: Diffusion Within Diffusion ── -->
+      <div class="explainer-page" data-page="5">
+        <div class="arch-mini">
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--green);">STATE<span class="arch-mini-sub">72-dim FiLM</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--accent3);">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent);">PERCEIVE<span class="arch-mini-sub">vision + DSL</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--accent3);">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">BACKBONE<span class="arch-mini-sub">transformer</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--accent3);">&#9654;</div>
+          <div class="arch-mini-box arch-done" style="--arch-color:var(--accent2);">EXPERTS<span class="arch-mini-sub">MoE top-2</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--accent3);">&#9654;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--accent3);">GDiT<span class="arch-mini-sub">outer: 5 steps</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--orange);">&#x21BB;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--orange);">IMAGINE<span class="arch-mini-sub">inner: 2-3</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--pink);">&#x21BB;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--pink);">CHECK<span class="arch-mini-sub">PRM verify</span></div>
+          <div class="arch-mini-arrow arch-lit-arrow" style="--arch-color:var(--green);">&#9654;</div>
+          <div class="arch-mini-box arch-lit" style="--arch-color:var(--green);">OUTPUT</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:1100px; margin:0 auto; align-items:stretch;">
+          <div class="card" style="border-color:var(--accent3);">
+            <h4 style="color:var(--accent3); margin-bottom:12px;">Diffusion Within Diffusion</h4>
+            <p style="font-size:15px; line-height:1.7;">
+              Here's where it all clicks. The mental simulation (page 4) and the actual output (page 3) both use the <em>same architecture</em> - the GDiT. The only difference is how many steps they run.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              <strong>Inner diffusion</strong> (2-3 steps): quick imagination - "what if I tried this?" Rough, fast, disposable.
+              <br><strong>Outer diffusion</strong> (5 steps): the real answer - refined, confident, final.
+            </p>
+            <p style="font-size:15px; line-height:1.7; margin-top:12px;">
+              One architecture, two roles. The same network that produces answers also produces dreams. Confidence emerges naturally from how clear the denoised result is - no separate judge needed. This has never been built before.
+            </p>
+          </div>
+          <div class="card" style="border-color:var(--dim); background:rgba(139,92,246,0.03);">
+            <div style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">The Analogy</div>
+            <p style="font-size:22px; line-height:1.5; color:var(--text);">
+              Other AIs need one brain to think and another brain to judge.
+            </p>
+            <p style="font-size:22px; line-height:1.5; color:var(--accent3); margin-top:12px;">
+              Engram uses one brain for both - just squints for imagination, opens eyes for the real thing.
+            </p>
+            <div style="margin-top:20px; padding:16px; border-radius:8px; background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2);">
+              <div style="font-size:12px; color:var(--accent3); font-weight:600; margin-bottom:8px;">MATH &amp; RESEARCH</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--accent3); margin-bottom:8px;">Inner: x̂ = GDiT(x, steps=2) → conf(x̂)<br>Outer: y = GDiT(x_best, steps=5) → output<br>No separate critic: denoiser IS the judge</div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6;"><strong>Diffuser</strong> (Janner et al., 2022) - planning as denoising in trajectory space. <strong>UniSim</strong> (Yang et al., 2023) - unified simulation via generative models. <strong>No direct analog</strong> - Ha &amp; Schmidhuber (2018), Dreamer, MuZero all use separate world model networks. Engram uses one.</div>
+              <div style="font-size:12px; color:var(--accent3); margin-top:6px; font-style:italic;">Novel contribution - no prior architecture unifies output generation and world simulation in a single network.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sub-page container -->
+
+    <!-- ── FLOW DIAGRAM - persistent across all pages ── -->
+    <div style="flex:0 0 auto; padding:12px 0 0;">
+      <div id="explainer-flow" style="display:flex; align-items:center; justify-content:center; gap:0; max-width:1100px; margin:0 auto;">
+        <div class="flow-step flow-active" data-step="0" style="--flow-color:var(--green);">
+          <div class="flow-icon">1</div>
+          <div class="flow-label">State<br>Engine</div>
+        </div>
+        <div class="flow-arrow">&#9654;</div>
+        <div class="flow-step" data-step="1" style="--flow-color:var(--accent2);">
+          <div class="flow-icon">2</div>
+          <div class="flow-label">Library<br>Learning</div>
+        </div>
+        <div class="flow-arrow">&#9654;</div>
+        <div class="flow-step" data-step="2" style="--flow-color:var(--accent);">
+          <div class="flow-icon">3</div>
+          <div class="flow-label">GDiT<br>Reasoning</div>
+        </div>
+        <div class="flow-arrow">&#9654;</div>
+        <div class="flow-step" data-step="3" style="--flow-color:var(--orange);">
+          <div class="flow-icon">4</div>
+          <div class="flow-label">Mental<br>Simulation</div>
+        </div>
+        <div class="flow-arrow">&#9654;</div>
+        <div class="flow-step" data-step="4" style="--flow-color:var(--pink);">
+          <div class="flow-icon">5</div>
+          <div class="flow-label">Meta-<br>cognition</div>
+        </div>
+        <div class="flow-arrow">&#9654;</div>
+        <div class="flow-step" data-step="5" style="--flow-color:var(--accent3);">
+          <div class="flow-icon">6</div>
+          <div class="flow-label">Diffusion<br>&sup2;</div>
+        </div>
+      </div>
+
+      <!-- Navigation bar -->
+      <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-top:12px;">
+        <button id="explainer-prev" onclick="explainerNav(-1); event.stopPropagation();" style="background:rgba(255,255,255,0.06); border:1px solid var(--dim); color:var(--muted); padding:8px 20px; border-radius:6px; cursor:pointer; font-size:14px; font-family:inherit; transition:all 0.2s;">&#9664; BACK</button>
+        <div style="font-size:13px; color:var(--muted);"><span id="explainer-num">1</span> / 6</div>
+        <button id="explainer-next" onclick="explainerNav(1); event.stopPropagation();" style="background:rgba(0,212,255,0.15); border:1px solid var(--accent); color:var(--accent); padding:8px 20px; border-radius:6px; cursor:pointer; font-size:14px; font-family:inherit; font-weight:600; transition:all 0.2s;">NEXT &#9654;</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 6: ARCHITECTURE VISUAL -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-grid" data-slide="7">
+  <div class="full-width text-center">
+    <div class="label mb-16">ARCHITECTURE</div>
+    <h2>The <span class="gradient-text">Cognitive Mesh</span></h2>
+    <p class="mt-8" style="margin:8px auto 32px;">Five interdependent layers, not a sequential pipeline.</p>
+
+    <div class="arch-diagram">
+      <div class="arch-layer" style="border-color:var(--pink); background:rgba(236,72,153,0.05);">
+        <div class="layer-name" style="color:var(--pink);">L5: METACOGNITION</div>
+        <div class="layer-desc">Process reward model &middot; Self-monitoring &middot; Confidence tracking &middot; Re-masking on doubt</div>
+        <div class="layer-badge" style="background:rgba(236,72,153,0.15); color:var(--pink);">Whole-board check</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:6px; font-style:italic;">Steps back after every move to ask: "Does this still make sense?"</div>
+      </div>
+      <div class="connector"></div>
+      <div class="arch-layer" style="border-color:var(--accent3); background:rgba(139,92,246,0.05);">
+        <div class="layer-name" style="color:var(--accent3);">L4: REASONING</div>
+        <div class="layer-desc">Autoregressive &harr; GDiT Diffusion &harr; Tree Search &harr; Memory Retrieval</div>
+        <div class="layer-badge" style="background:rgba(139,92,246,0.15); color:var(--accent3);">4 modes, 1 router</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:6px; font-style:italic;">Picks the right thinking strategy for each problem - write, imagine, search, or remember</div>
+      </div>
+      <div class="connector"></div>
+      <div class="arch-layer" style="border-color:var(--accent2); background:rgba(99,102,241,0.05);">
+        <div class="layer-name" style="color:var(--accent2);">L3: WORKING MEMORY</div>
+        <div class="layer-desc">Transformer backbone &middot; MoE (48 experts, top-2) &middot; State-biased routing &middot; Library learning</div>
+        <div class="layer-badge" style="background:rgba(99,102,241,0.15); color:var(--accent2);">2.1B params</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:6px; font-style:italic;">48 specialists, each memorizing a skill - the router picks the right 2 for the job</div>
+      </div>
+      <div class="connector"></div>
+      <div class="arch-layer" style="border-color:var(--accent); background:rgba(0,212,255,0.05);">
+        <div class="layer-name" style="color:var(--accent);">L2: PERCEPTION</div>
+        <div class="layer-desc">PseudoDeepStack vision (3-scale) &middot; Grid encoder &middot; Task feature analysis &middot; 42-function DSL</div>
+        <div class="layer-badge" style="background:rgba(0,212,255,0.15); color:var(--accent);">Multi-modal</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:6px; font-style:italic;">Eyes and hands - sees the problem and has 42 tools to manipulate it</div>
+      </div>
+      <div class="connector"></div>
+      <div class="arch-layer" style="border-color:var(--green); background:rgba(16,185,129,0.05);">
+        <div class="layer-name" style="color:var(--green);">L1: STATE ENGINE</div>
+        <div class="layer-desc">72-dim biological state vector &middot; 8 hierarchical layers &middot; FiLM conditioning &middot; Attention temperature</div>
+        <div class="layer-badge" style="background:rgba(16,185,129,0.15); color:var(--green);">Bio-inspired</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:6px; font-style:italic;">The mood ring - sets the cognitive context before thinking begins</div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:20px; justify-content:center; margin-top:24px;">
+      <div style="font-size:12px; color:var(--muted);">
+        <span style="color:var(--accent);">Slick V3-mini:</span> 2.5B total, 1.6B active - runs on consumer GPU
+      </div>
+      <div style="font-size:12px; color:var(--muted);">
+        <span style="color:var(--accent3);">Slick V3:</span> 190B total, 48B active - single DGX Spark
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 6: WHAT WE'VE BUILT -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-radial" data-slide="8">
+  <div class="full-width text-center">
+    <div class="label mb-16">TRACTION</div>
+    <h2>What We've Already <span class="accent">Built & Shipped</span></h2>
+
+    <div class="card-grid cols-4 mt-32">
+      <div class="stat-card card">
+        <div class="stat-value" style="color:var(--orange);">Slick V1.5</div>
+        <div class="stat-label">Model trained & converged</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">542M params, 16 layers, final loss 0.00017. FiLM + State Token + MoE verified.</div>
+      </div>
+      <div class="stat-card card">
+        <div class="stat-value accent">2B+</div>
+        <div class="stat-label">Tokens trained</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">1.94B pretraining (FineWeb-Edu) + 62K SFT samples + 647K VLM instruction samples.</div>
+      </div>
+      <div class="stat-card card">
+        <div class="stat-value accent2">53</div>
+        <div class="stat-label">Research documents</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">4 whitepapers (5,429 lines), architecture specs, design docs, conversation logs.</div>
+      </div>
+      <div class="stat-card card">
+        <div class="stat-value green">970</div>
+        <div class="stat-label">Memories indexed</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">SoulKeeper memory system in production. ONNX embeddings, reflexive auto-recall.</div>
+      </div>
+    </div>
+
+    <div class="card-grid cols-2 mt-24" style="max-width:800px; margin:24px auto 0;">
+      <div class="card">
+        <h4 style="margin-bottom:12px;">Research & Engineering</h4>
+        <ul class="bullet-list" style="font-size:14px;">
+          <li>Cognitive Mesh</li>
+          <li>Biological Architecture</li>
+          <li>Associative Memory</li>
+          <li>PseudoDeepStack Vision Pipeline (novel 3-layer extraction)</li>
+          <li>GDiT Reasoning Engine &amp; Diffusion World Model</li>
+          <li>42-function DSL + 404 ARC reasoning traces</li>
+          <li>ContextEngine - 5-technique context compression</li>
+          <li>Autonomous watchdog system - AI debugs overnight while the engineer sleeps</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4 style="margin-bottom:12px;">Verified & Measured</h4>
+        <ul class="bullet-list" style="font-size:14px;">
+          <li>State conditioning shifts output distributions (KL div &gt; 0.16)</li>
+          <li>FiLM modulation: curiosity, confidence, annoyance alter reasoning</li>
+          <li>Phase 3 SFT: surgical training, zero catastrophic forgetting</li>
+          <li>VLM pipeline: PseudoDeepStack 3-layer extraction + GGUF conversion</li>
+          <li>GPT-OSS-20B-Vision shipped to HuggingFace</li>
+          <li>Memory daemon: 115 MB RSS, 100% CPU, reflexive recall on every prompt</li>
+          <li>Interactive demo &amp; pitch deck running on DGX Spark</li>
+          <li>Full training infra: dashboard, pause/resume, auto-checkpointing</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 7: GDiT DEEP DIVE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="9">
+  <div class="full-width">
+    <div class="label mb-16">DEEP DIVE</div>
+    <h2>Grid Diffusion Transformer - <span class="accent">The Reasoning Engine</span></h2>
+
+    <!-- ═══ GDiT DEEP DIVE - SCHEMATIC LAYOUT ═══ -->
+    <div style="max-width:1100px; margin:28px auto 0; width:100%;">
+      <svg viewBox="0 0 1100 560" style="width:100%; height:auto; display:block;">
+        <defs>
+          <filter id="dd-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="dd-glow-sm" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <marker id="dd-a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#00d4ff" opacity="0.5"/></marker>
+          <marker id="dd-ag" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981" opacity="0.5"/></marker>
+          <marker id="dd-ap" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ec4899" opacity="0.5"/></marker>
+          <radialGradient id="dd-rg" cx="50%" cy="45%"><stop offset="0%" stop-color="#00d4ff" stop-opacity="0.06"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+          <pattern id="dd-dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r="0.5" fill="#1e293b" opacity="0.35"/></pattern>
+        </defs>
+        <rect width="1100" height="560" fill="#060810" rx="12"/>
+        <rect width="1100" height="560" fill="url(#dd-dots)" rx="12"/>
+        <ellipse cx="550" cy="260" rx="420" ry="230" fill="url(#dd-rg)"/>
+
+        <!-- ═══ 5-STEP UNMASKING - Left column, vertical pipeline ═══ -->
+        <text x="165" y="30" fill="#00d4ff" font-size="11" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1.5">ITERATIVE UNMASKING</text>
+
+        <!-- Step 0 -->
+        <g transform="translate(40, 48)">
+          <rect width="250" height="42" rx="8" fill="#0a0f18" stroke="#ef4444" stroke-width="1.2" opacity="0.9"/>
+          <text x="14" y="17" fill="#ef4444" font-size="9" font-family="JetBrains Mono,monospace" font-weight="700">STEP 0</text>
+          <text x="14" y="33" fill="#334155" font-size="11" font-family="JetBrains Mono,monospace">[? ? ? ? ? ? ? ? ?]</text>
+          <text x="236" y="33" fill="#475569" font-size="8" text-anchor="end" font-family="Inter,sans-serif">100% masked</text>
+        </g>
+        <line x1="165" y1="92" x2="165" y2="102" stroke="#475569" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Step 1 -->
+        <g transform="translate(40, 104)">
+          <rect width="250" height="42" rx="8" fill="#0a0f18" stroke="#f59e0b" stroke-width="1.2" opacity="0.9"/>
+          <text x="14" y="17" fill="#f59e0b" font-size="9" font-family="JetBrains Mono,monospace" font-weight="700">STEP 1</text>
+          <text x="14" y="33" fill="#334155" font-size="11" font-family="JetBrains Mono,monospace">[? <tspan fill="#00d4ff">3</tspan> ? ? <tspan fill="#00d4ff">7</tspan> ? ? <tspan fill="#00d4ff">1</tspan> ?]</text>
+          <text x="236" y="33" fill="#475569" font-size="8" text-anchor="end" font-family="Inter,sans-serif">easiest first</text>
+        </g>
+        <line x1="165" y1="148" x2="165" y2="158" stroke="#475569" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Step 2 -->
+        <g transform="translate(40, 160)">
+          <rect width="250" height="42" rx="8" fill="#0a0f18" stroke="#f59e0b" stroke-width="1.2" opacity="0.9"/>
+          <text x="14" y="17" fill="#f59e0b" font-size="9" font-family="JetBrains Mono,monospace" font-weight="700">STEP 2</text>
+          <text x="14" y="33" fill="#334155" font-size="11" font-family="JetBrains Mono,monospace">[<tspan fill="#00d4ff">5</tspan> 3 ? <tspan fill="#00d4ff">2</tspan> 7 ? <tspan fill="#00d4ff">4</tspan> 1 ?]</text>
+          <text x="236" y="33" fill="#475569" font-size="8" text-anchor="end" font-family="Inter,sans-serif">growing confidence</text>
+        </g>
+        <line x1="165" y1="204" x2="165" y2="214" stroke="#475569" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Step 3 -->
+        <g transform="translate(40, 216)">
+          <rect width="250" height="42" rx="8" fill="#0a0f18" stroke="#10b981" stroke-width="1.2" opacity="0.9"/>
+          <text x="14" y="17" fill="#10b981" font-size="9" font-family="JetBrains Mono,monospace" font-weight="700">STEP 3</text>
+          <text x="14" y="33" fill="#64748b" font-size="11" font-family="JetBrains Mono,monospace">[5 3 <tspan fill="#00d4ff">9</tspan> 2 7 <tspan fill="#00d4ff">0</tspan> 4 1 ?]</text>
+          <text x="236" y="33" fill="#475569" font-size="8" text-anchor="end" font-family="Inter,sans-serif">almost solved</text>
+        </g>
+        <line x1="165" y1="260" x2="165" y2="270" stroke="#475569" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Step 4 - Solved -->
+        <g transform="translate(40, 272)">
+          <rect width="250" height="42" rx="8" fill="#0a0f18" stroke="#10b981" stroke-width="1.8"/>
+          <rect width="250" height="42" rx="8" fill="none" stroke="#10b981" stroke-width="1" opacity="0.15" filter="url(#dd-glow-sm)"/>
+          <text x="14" y="17" fill="#10b981" font-size="9" font-family="JetBrains Mono,monospace" font-weight="700">STEP 4</text>
+          <text x="14" y="33" fill="#e2e8f0" font-size="11" font-family="JetBrains Mono,monospace">[5 3 9 2 7 0 4 1 <tspan fill="#10b981">6</tspan>]</text>
+          <text x="236" y="33" fill="#10b981" font-size="8" text-anchor="end" font-family="Inter,sans-serif" font-weight="600">SOLVED</text>
+        </g>
+
+        <!-- Re-mask annotation -->
+        <g transform="translate(40, 330)">
+          <rect width="250" height="36" rx="6" fill="rgba(236,72,153,0.06)" stroke="#ec4899" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="125" y="15" fill="#ec4899" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="600">METACOGNITION CHECK AFTER EACH STEP</text>
+          <text x="125" y="28" fill="#475569" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">confidence drops? re-mask suspicious cells, retry</text>
+        </g>
+
+        <!-- ═══ 4 COMPONENTS - Right side, arranged as a circuit ═══ -->
+
+        <!-- EXAMPLE ENCODER - top right -->
+        <g transform="translate(370, 40)">
+          <rect width="320" height="90" rx="14" fill="#0a0f18" stroke="#a78bfa" stroke-width="1.5"/>
+          <circle cx="26" cy="26" r="14" fill="rgba(167,139,250,0.12)" stroke="#a78bfa" stroke-width="1"/>
+          <text x="26" y="30" fill="#a78bfa" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">E</text>
+          <text x="52" y="24" fill="#a78bfa" font-size="12" font-family="Inter,sans-serif" font-weight="700">Example Encoder</text>
+          <text x="52" y="40" fill="#64748b" font-size="9" font-family="Inter,sans-serif">4-layer bidirectional transformer</text>
+          <text x="18" y="60" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">embed = color + 2D_pos + role(in/out)</text>
+          <text x="18" y="74" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">cross-attn at every denoising step</text>
+          <text x="255" y="78" fill="#a78bfa" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">2-5 example pairs</text>
+        </g>
+
+        <!-- 2D POSITION BIAS - middle right -->
+        <g transform="translate(370, 150)">
+          <rect width="320" height="90" rx="14" fill="#0a0f18" stroke="#8b5cf6" stroke-width="1.5"/>
+          <circle cx="26" cy="26" r="14" fill="rgba(139,92,246,0.12)" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="26" y="30" fill="#8b5cf6" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">P</text>
+          <text x="52" y="24" fill="#8b5cf6" font-size="12" font-family="Inter,sans-serif" font-weight="700">2D Relative Position Bias</text>
+          <text x="52" y="40" fill="#64748b" font-size="9" font-family="Inter,sans-serif">Native spatial awareness (not flattened 1D)</text>
+          <text x="18" y="60" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">cell(5,5) knows it neighbors (4,5),(5,4)</text>
+          <text x="18" y="74" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">learned bias, inspired by Swin Transformer</text>
+          <text x="255" y="78" fill="#8b5cf6" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">2D &gt; 1D for grids</text>
+        </g>
+
+        <!-- Connection line E → P -->
+        <line x1="530" y1="132" x2="530" y2="148" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,2" opacity="0.4" marker-end="url(#dd-a)"/>
+
+        <!-- STATE-CONDITIONED DENOISING - lower right -->
+        <g transform="translate(370, 260)">
+          <rect width="320" height="90" rx="14" fill="#0a0f18" stroke="#10b981" stroke-width="1.5"/>
+          <circle cx="26" cy="26" r="14" fill="rgba(16,185,129,0.12)" stroke="#10b981" stroke-width="1"/>
+          <text x="26" y="30" fill="#10b981" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">S</text>
+          <text x="52" y="24" fill="#10b981" font-size="12" font-family="Inter,sans-serif" font-weight="700">State-Conditioned Denoising</text>
+          <text x="52" y="40" fill="#64748b" font-size="9" font-family="Inter,sans-serif">72-dim internal state modulates every step</text>
+          <text x="18" y="60" fill="#10b981" font-size="8" font-family="JetBrains Mono,monospace">&gamma;(state) &middot; x + &beta;(state)</text>
+          <text x="18" y="74" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">confidence=sharp, curiosity=explore</text>
+          <text x="255" y="78" fill="#10b981" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">FiLM conditioning</text>
+        </g>
+
+        <!-- Connection line P → S -->
+        <line x1="530" y1="242" x2="530" y2="258" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity="0.4" marker-end="url(#dd-ag)"/>
+
+        <!-- WORLD MODEL (FREE) - bottom right -->
+        <g transform="translate(370, 370)">
+          <rect width="320" height="90" rx="14" fill="#0a0f18" stroke="#ec4899" stroke-width="1.5"/>
+          <circle cx="26" cy="26" r="14" fill="rgba(236,72,153,0.12)" stroke="#ec4899" stroke-width="1"/>
+          <text x="26" y="30" fill="#ec4899" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">W</text>
+          <text x="52" y="24" fill="#ec4899" font-size="12" font-family="Inter,sans-serif" font-weight="700">World Model (Free)</text>
+          <text x="52" y="40" fill="#64748b" font-size="9" font-family="Inter,sans-serif">Same GDiT, 2-3 steps instead of 5</text>
+          <text x="18" y="60" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">blurry = uncertain, clear = confident</text>
+          <text x="18" y="74" fill="#475569" font-size="8" font-family="JetBrains Mono,monospace">mental simulation, no extra network</text>
+          <text x="255" y="78" fill="#ec4899" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">JEPA + Dreamer</text>
+        </g>
+
+        <!-- Connection line S → W -->
+        <line x1="530" y1="352" x2="530" y2="368" stroke="#ec4899" stroke-width="1" stroke-dasharray="3,2" opacity="0.4" marker-end="url(#dd-ap)"/>
+
+        <!-- ═══ Connecting left pipeline to right components ═══ -->
+        <!-- Arrow from unmasking steps to the component stack -->
+        <path d="M292,180 C320,180 340,100 368,100" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="4,3" fill="none" opacity="0.3" marker-end="url(#dd-a)"/>
+        <path d="M292,200 C330,200 345,195 368,195" stroke="#8b5cf6" stroke-width="1.2" stroke-dasharray="4,3" fill="none" opacity="0.3" marker-end="url(#dd-a)"/>
+        <path d="M292,290 C330,290 345,305 368,305" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4,3" fill="none" opacity="0.3" marker-end="url(#dd-ag)"/>
+
+        <!-- ═══ VS STABLE DIFFUSION - compact comparison strip ═══ -->
+        <g transform="translate(720, 40)">
+          <rect width="340" height="90" rx="10" fill="#0a0f18" stroke="#1e293b" stroke-width="1"/>
+          <text x="170" y="18" fill="#475569" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">GDiT vs STABLE DIFFUSION</text>
+          <!-- Header row -->
+          <text x="130" y="36" fill="#ef4444" font-size="8" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">SD 1.5</text>
+          <text x="220" y="36" fill="#00d4ff" font-size="8" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">GDiT</text>
+          <text x="290" y="36" fill="#10b981" font-size="8" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">ADVANTAGE</text>
+          <line x1="16" y1="42" x2="324" y2="42" stroke="#1e293b" stroke-width="1"/>
+          <!-- Params -->
+          <text x="40" y="55" fill="#64748b" font-size="8" font-family="Inter,sans-serif">Params</text>
+          <text x="130" y="55" fill="#ef4444" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace">1.5B</text>
+          <text x="220" y="55" fill="#00d4ff" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace">65M</text>
+          <text x="290" y="55" fill="#10b981" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="600">23x smaller</text>
+          <!-- Steps -->
+          <text x="40" y="68" fill="#64748b" font-size="8" font-family="Inter,sans-serif">Steps</text>
+          <text x="130" y="68" fill="#ef4444" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace">20-50</text>
+          <text x="220" y="68" fill="#00d4ff" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace">5</text>
+          <text x="290" y="68" fill="#10b981" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="600">10x fewer</text>
+          <!-- Latency -->
+          <text x="40" y="81" fill="#64748b" font-size="8" font-family="Inter,sans-serif">Latency</text>
+          <text x="130" y="81" fill="#ef4444" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace">5-30s</text>
+          <text x="220" y="81" fill="#00d4ff" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace">~100ms</text>
+          <text x="290" y="81" fill="#10b981" font-size="8" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="600">300x faster</text>
+        </g>
+
+        <!-- ═══ NOISE TYPE callout ═══ -->
+        <g transform="translate(720, 145)">
+          <rect width="164" height="50" rx="8" fill="#0a0f18" stroke="#ef4444" stroke-width="1" opacity="0.8"/>
+          <text x="82" y="18" fill="#ef4444" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">SD: Gaussian noise</text>
+          <text x="82" y="32" fill="#475569" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">Continuous pixel space</text>
+          <text x="82" y="44" fill="#475569" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">Designed for images</text>
+        </g>
+        <g transform="translate(896, 145)">
+          <rect width="164" height="50" rx="8" fill="#0a0f18" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="82" y="18" fill="#00d4ff" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">GDiT: Discrete masks</text>
+          <text x="82" y="32" fill="#64748b" font-size="7" text-anchor="middle" font-family="Inter,sans-serif">Categorical token space</text>
+          <text x="82" y="44" fill="#00d4ff" font-size="7" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">Designed for REASONING</text>
+        </g>
+
+        <!-- ═══ AGI FOOTER - spanning full width ═══ -->
+        <g transform="translate(40, 485)">
+          <rect width="1020" height="60" rx="12" fill="rgba(16,185,129,0.04)" stroke="rgba(16,185,129,0.2)" stroke-width="1.5"/>
+          <rect width="1020" height="60" rx="12" fill="none" stroke="rgba(16,185,129,0.08)" stroke-width="1" filter="url(#dd-glow-sm)"/>
+          <text x="510" y="22" fill="#10b981" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" letter-spacing="1.5">WHY THIS IS A STEP TOWARD AGI</text>
+          <text x="510" y="40" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter,sans-serif">The same iterative refinement that solves structured reasoning generalizes to any domain:</text>
+          <text x="510" y="54" fill="#e2e8f0" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">code generation &middot; mathematical proof &middot; robotic planning &middot; molecular design &middot; autonomous agents</text>
+        </g>
+
+        <!-- ═══ Animated particles ═══ -->
+        <!-- Particle flowing down the unmasking pipeline -->
+        <circle r="2.5" fill="#00d4ff" opacity="0">
+          <animateMotion path="M165,50 L165,100 L165,156 L165,212 L165,270 L165,314" dur="4s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;0.8;0.8;0.8;0.8;0.8;0" dur="4s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Particle flowing down the component stack -->
+        <circle r="2.5" fill="#a78bfa" opacity="0">
+          <animateMotion path="M530,48 L530,132 L530,150 L530,242 L530,260 L530,352 L530,370 L530,460" dur="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;0.7;0.7;0.7;0.7;0.7;0.7;0" dur="5s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 8: ROADMAP -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-radial" data-slide="10">
+  <div class="full-width text-center">
+    <div class="label mb-16">ROADMAP</div>
+    <h2>From Prototype to <span class="gradient-text">General Intelligence</span></h2>
+
+    <div class="timeline mt-48" style="padding-top:40px; padding-bottom:40px;">
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--orange);"></div>
+        <div class="timeline-title" style="color:var(--orange);">Slick V1.5</div>
+        <div class="timeline-date">Done - Feb 2026</div>
+        <div class="timeline-desc">542M proof of concept<br>FiLM + State Engine<br>42-function DSL<br>SoulKeeper memory</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent2);"></div>
+        <div class="timeline-title" style="color:var(--accent2);">Slick V3-mini</div>
+        <div class="timeline-date">Mar-Apr 2026</div>
+        <div class="timeline-desc">2.5B cognitive mesh<br>GDiT reasoning engine<br>World model (mental sim)<br>First reasoning benchmarks</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent3);"></div>
+        <div class="timeline-title" style="color:var(--accent3);">Slick V3</div>
+        <div class="timeline-date">Q3-Q4 2026</div>
+        <div class="timeline-desc">190B with 48 MoE experts<br>Full reasoning router<br>Cross-domain transfer<br>AGI-competitive reasoning</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--green);"></div>
+        <div class="timeline-title" style="color:var(--green);">Slick V4</div>
+        <div class="timeline-date">End of 2026</div>
+        <div class="timeline-desc">400B cognitive mesh<br>Unified text + vision + audio + code<br>Self-play &infin; training loop<br>Autonomous multi-step agents</div>
+      </div>
+    </div>
+
+    <div class="card-grid cols-4 mt-32" style="max-width:1100px; margin:32px auto 0;">
+      <div class="card text-center" style="border-color:var(--orange); padding:20px;">
+        <div style="font-size:14px; font-weight:600; color:var(--orange);">Slick V1.5 <span style="color:var(--green); font-size:11px;">DONE</span></div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">542M, FiLM + State<br>Proof of concept<br>Zero cost</div>
+      </div>
+      <div class="card text-center" style="border-color:var(--accent2); padding:20px;">
+        <div style="font-size:14px; font-weight:600; color:var(--accent2);">Slick V3-mini</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">2.5B, full cognitive mesh<br>3-4 days on DGX Spark<br>1.7 GB model</div>
+      </div>
+      <div class="card text-center" style="border-color:var(--accent3); padding:20px;">
+        <div style="font-size:14px; font-weight:600; color:var(--accent3);">Slick V3</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">190B, 48 MoE experts<br>8x H100 ~$60K<br>ARC benchmark leader</div>
+      </div>
+      <div class="card text-center" style="border-color:var(--green); padding:20px;">
+        <div style="font-size:14px; font-weight:600; color:var(--green);">Slick V4 - First AGI</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px;">400B, all modalities<br>Self-evolving cognition<br>Autonomous agents</div>
+      </div>
+    </div>
+
+    <!-- V4 Feature Breakdown -->
+    <div style="max-width:1100px; margin:20px auto 0; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div style="background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.15); border-radius:8px; padding:14px;">
+        <div style="font-size:12px; color:var(--green); font-weight:700; letter-spacing:1px; margin-bottom:8px;">SLICK V4: A SYNTHETIC MIND</div>
+        <div style="font-size:12px; color:var(--muted); line-height:1.7;">
+          <strong style="color:var(--text);">Not an LLM with features bolted on.</strong> A cognitive architecture modeled on the human brain - prefrontal cortex (metacognition), hippocampus (episodic memory), basal ganglia (expert routing), thalamus (state engine). It <em>self-improves</em>: decomposes every solution into reusable skills. <em>Self-repairs</em>: detects its own errors mid-thought and re-reasons. <em>Self-evolves</em>: generates infinite training data through self-play, getting smarter without human supervision. <strong style="color:var(--green);">Permanently.</strong>
+        </div>
+      </div>
+      <div style="background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.15); border-radius:8px; padding:14px;">
+        <div style="font-size:12px; color:var(--green); font-weight:700; letter-spacing:1px; margin-bottom:8px;">WHY THIS IS DIFFERENT FROM EVERYTHING ELSE</div>
+        <div style="font-size:12px; color:var(--muted); line-height:1.7;">
+          GPT-4 is a <em>reflex</em> - stimulus in, response out. Slick V4 has <strong style="color:var(--text);">internal experience</strong>. A 72-dim emotional state that modulates <em>how</em> it thinks. <strong style="color:var(--text);">Imagination</strong> - it simulates outcomes before acting. <strong style="color:var(--text);">Doubt</strong> - it questions its own work and retries. <strong style="color:var(--text);">128 specialized experts</strong> that form new skills autonomously. <strong style="color:var(--text);">Memory that spans months</strong> - it knows you, your project, your preferences. This isn't artificial intelligence. It's <strong style="color:var(--green);">artificial cognition</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 8.5: V4 - THE ENDGAME -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="10.5">
+  <div class="full-width text-center">
+    <div class="label mb-16">SLICK V4 - END OF 2026</div>
+    <h2>The <span class="gradient-text">Self-Evolving</span> Cognitive Architecture</h2>
+
+    <!-- ═══ V4 ARCHITECTURE - Structured Neural Diagram (SCALED UP) ═══ -->
+    <div style="max-width:1200px; margin:16px auto 0; width:100%;">
+      <svg viewBox="0 0 1100 550" style="width:100%; height:auto; display:block;">
+        <defs>
+          <linearGradient id="v4-fabric-h" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0"/><stop offset="15%" stop-color="#f59e0b" stop-opacity="0.4"/><stop offset="85%" stop-color="#f59e0b" stop-opacity="0.4"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></linearGradient>
+          <linearGradient id="v4-fabric-v" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0"/><stop offset="20%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="80%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></linearGradient>
+          <pattern id="v4-grid" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r="0.4" fill="#1e293b" opacity="0.15"/></pattern>
+        </defs>
+        <rect width="1100" height="550" fill="#050710" rx="12"/>
+        <rect width="1100" height="550" fill="url(#v4-grid)" rx="12"/>
+
+        <!-- ═══ ENGRAM NEURAL FABRIC - Subtle background grid lines ═══ -->
+        <line x1="80" y1="148" x2="1020" y2="148" stroke="url(#v4-fabric-h)" stroke-width="0.5"/>
+        <line x1="80" y1="232" x2="1020" y2="232" stroke="url(#v4-fabric-h)" stroke-width="0.5"/>
+        <line x1="80" y1="310" x2="1020" y2="310" stroke="url(#v4-fabric-h)" stroke-width="0.5"/>
+        <line x1="280" y1="30" x2="280" y2="400" stroke="url(#v4-fabric-v)" stroke-width="0.5"/>
+        <line x1="550" y1="30" x2="550" y2="400" stroke="url(#v4-fabric-v)" stroke-width="0.5"/>
+        <line x1="820" y1="30" x2="820" y2="400" stroke="url(#v4-fabric-v)" stroke-width="0.5"/>
+
+        <!-- ═══ TOP ROW: Input Modalities ═══ -->
+        <g transform="translate(120, 18)">
+          <rect x="0" y="0" width="150" height="42" rx="7" fill="#0a0f18" stroke="#64748b" stroke-width="1"/>
+          <text x="75" y="17" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" letter-spacing="1.5" font-weight="600">INPUT</text>
+          <text x="75" y="33" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">Text</text>
+        </g>
+        <g transform="translate(320, 18)">
+          <rect x="0" y="0" width="150" height="42" rx="7" fill="#0a0f18" stroke="#64748b" stroke-width="1"/>
+          <text x="75" y="17" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" letter-spacing="1.5" font-weight="600">INPUT</text>
+          <text x="75" y="33" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">Vision</text>
+        </g>
+        <g transform="translate(630, 18)">
+          <rect x="0" y="0" width="150" height="42" rx="7" fill="#0a0f18" stroke="#64748b" stroke-width="1"/>
+          <text x="75" y="17" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" letter-spacing="1.5" font-weight="600">INPUT</text>
+          <text x="75" y="33" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">Audio</text>
+        </g>
+        <g transform="translate(830, 18)">
+          <rect x="0" y="0" width="150" height="42" rx="7" fill="#0a0f18" stroke="#64748b" stroke-width="1"/>
+          <text x="75" y="17" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter,sans-serif" letter-spacing="1.5" font-weight="600">INPUT</text>
+          <text x="75" y="33" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">Code</text>
+        </g>
+
+        <!-- Down arrows from inputs to nuclei -->
+        <line x1="195" y1="60" x2="195" y2="80" stroke="#64748b" stroke-width="1.2" opacity="0.4"/>
+        <line x1="395" y1="60" x2="395" y2="80" stroke="#64748b" stroke-width="1.2" opacity="0.4"/>
+        <line x1="705" y1="60" x2="705" y2="80" stroke="#64748b" stroke-width="1.2" opacity="0.4"/>
+        <line x1="905" y1="60" x2="905" y2="80" stroke="#64748b" stroke-width="1.2" opacity="0.4"/>
+
+        <!-- ═══ MIDDLE ROW: The Four Artificial Nuclei ═══ -->
+
+        <!-- NUCLEUS 1: Artificial Occipital Lobe -->
+        <g transform="translate(45, 82)">
+          <rect x="0" y="0" width="250" height="105" rx="10" fill="#0a0f18" stroke="#00d4ff" stroke-width="1.5"/>
+          <rect x="0" y="0" width="250" height="22" rx="10" fill="#00d4ff" fill-opacity="0.08"/>
+          <rect x="0" y="10" width="250" height="12" fill="#00d4ff" fill-opacity="0.08"/>
+          <text x="125" y="16" fill="#00d4ff" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">ARTIFICIAL OCCIPITAL LOBE</text>
+          <text x="125" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">PseudoDeepStack Vision</text>
+          <text x="125" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">Multi-scale depth perception</text>
+          <text x="125" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">SigLIP L9+L18+L27</text>
+          <text x="125" y="93" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">edges &rarr; shapes &rarr; semantics</text>
+        </g>
+
+        <!-- NUCLEUS 2: Artificial Prefrontal Cortex -->
+        <g transform="translate(310, 82)">
+          <rect x="0" y="0" width="250" height="105" rx="10" fill="#0a0f18" stroke="#6366f1" stroke-width="1.5"/>
+          <rect x="0" y="0" width="250" height="22" rx="10" fill="#6366f1" fill-opacity="0.08"/>
+          <rect x="0" y="10" width="250" height="12" fill="#6366f1" fill-opacity="0.08"/>
+          <text x="125" y="16" fill="#6366f1" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">ARTIFICIAL PREFRONTAL CORTEX</text>
+          <text x="125" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">GDiT Reasoning Engine</text>
+          <text x="125" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">Iterative diffusion logic</text>
+          <text x="125" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">5-step unmasking &middot; 300x faster</text>
+          <text x="125" y="93" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">think &rarr; verify &rarr; revise &rarr; commit</text>
+        </g>
+
+        <!-- NUCLEUS 3: Artificial Hippocampus -->
+        <g transform="translate(575, 82)">
+          <rect x="0" y="0" width="250" height="105" rx="10" fill="#0a0f18" stroke="#8b5cf6" stroke-width="1.5"/>
+          <rect x="0" y="0" width="250" height="22" rx="10" fill="#8b5cf6" fill-opacity="0.08"/>
+          <rect x="0" y="10" width="250" height="12" fill="#8b5cf6" fill-opacity="0.08"/>
+          <text x="125" y="16" fill="#8b5cf6" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">ARTIFICIAL HIPPOCAMPUS</text>
+          <text x="125" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">Persistent Memory Engine</text>
+          <text x="125" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">Episodic + semantic recall</text>
+          <text x="125" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">970+ memories &middot; cosine search</text>
+          <text x="125" y="93" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">spans months, not sessions</text>
+        </g>
+
+        <!-- NUCLEUS 4: Artificial Basal Ganglia -->
+        <g transform="translate(840, 82)">
+          <rect x="0" y="0" width="220" height="105" rx="10" fill="#0a0f18" stroke="#10b981" stroke-width="1.5"/>
+          <rect x="0" y="0" width="220" height="22" rx="10" fill="#10b981" fill-opacity="0.08"/>
+          <rect x="0" y="10" width="220" height="12" fill="#10b981" fill-opacity="0.08"/>
+          <text x="110" y="16" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">ARTIFICIAL BASAL GANGLIA</text>
+          <text x="110" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">Skill Library + Routing</text>
+          <text x="110" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">128 MoE experts, hot-plug</text>
+          <text x="110" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">library learning &middot; decompose</text>
+          <text x="110" y="93" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">skills emerge from experience</text>
+        </g>
+
+        <!-- ═══ CENTRAL BAND: HULLHB Neural Fabric ═══ -->
+        <!-- Vertical connectors from nuclei down to fabric -->
+        <line x1="170" y1="187" x2="170" y2="207" stroke="#00d4ff" stroke-width="1.2" opacity="0.5"/>
+        <line x1="435" y1="187" x2="435" y2="207" stroke="#6366f1" stroke-width="1.2" opacity="0.5"/>
+        <line x1="700" y1="187" x2="700" y2="207" stroke="#8b5cf6" stroke-width="1.2" opacity="0.5"/>
+        <line x1="950" y1="187" x2="950" y2="207" stroke="#10b981" stroke-width="1.2" opacity="0.5"/>
+
+        <rect x="40" y="208" width="1020" height="42" rx="8" fill="#0a0f18" stroke="#f59e0b" stroke-width="1.5"/>
+        <rect x="40" y="208" width="1020" height="42" rx="8" fill="#f59e0b" fill-opacity="0.04"/>
+        <!-- Signal dots -->
+        <circle cx="80" cy="229" r="2.5" fill="#f59e0b" opacity="0.6"/>
+        <circle cx="200" cy="229" r="2" fill="#00d4ff" opacity="0.4"/>
+        <circle cx="350" cy="229" r="2.5" fill="#6366f1" opacity="0.5"/>
+        <circle cx="500" cy="229" r="2" fill="#8b5cf6" opacity="0.4"/>
+        <circle cx="620" cy="229" r="2.5" fill="#f59e0b" opacity="0.5"/>
+        <circle cx="760" cy="229" r="2" fill="#10b981" opacity="0.4"/>
+        <circle cx="880" cy="229" r="2.5" fill="#ec4899" opacity="0.3"/>
+        <circle cx="1010" cy="229" r="2" fill="#f59e0b" opacity="0.5"/>
+        <text x="550" y="222" fill="#f59e0b" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="2.5">ENGRAM NEURAL FABRIC</text>
+        <text x="550" y="243" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="Inter,sans-serif">HULLHB - High-speed, Ultra-Low Latency, High Bandwidth - All nuclei interconnected simultaneously</text>
+
+        <!-- Vertical connectors from fabric down to infrastructure -->
+        <line x1="210" y1="250" x2="210" y2="272" stroke="#f59e0b" stroke-width="1.2" opacity="0.4"/>
+        <line x1="550" y1="250" x2="550" y2="272" stroke="#ec4899" stroke-width="1.2" opacity="0.4"/>
+        <line x1="890" y1="250" x2="890" y2="272" stroke="#10b981" stroke-width="1.2" opacity="0.4"/>
+
+        <!-- ═══ BOTTOM ROW: Cognitive Infrastructure ═══ -->
+
+        <!-- Cognitive Mesh Router (Thalamus) -->
+        <g transform="translate(45, 274)">
+          <rect x="0" y="0" width="330" height="90" rx="10" fill="#0a0f18" stroke="#f59e0b" stroke-width="1.5"/>
+          <rect x="0" y="0" width="330" height="22" rx="10" fill="#f59e0b" fill-opacity="0.06"/>
+          <rect x="0" y="10" width="330" height="12" fill="#f59e0b" fill-opacity="0.06"/>
+          <text x="165" y="16" fill="#f59e0b" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">COGNITIVE MESH ROUTER</text>
+          <text x="165" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">Artificial Thalamus</text>
+          <text x="165" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">4 reasoning modes &middot; mid-sequence switching</text>
+          <text x="165" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">fast &middot; analytical &middot; creative &middot; verify</text>
+        </g>
+
+        <!-- 72-Dim State Engine -->
+        <g transform="translate(390, 274)">
+          <rect x="0" y="0" width="320" height="90" rx="10" fill="#0a0f18" stroke="#ec4899" stroke-width="1.5"/>
+          <rect x="0" y="0" width="320" height="22" rx="10" fill="#ec4899" fill-opacity="0.06"/>
+          <rect x="0" y="10" width="320" height="12" fill="#ec4899" fill-opacity="0.06"/>
+          <text x="160" y="16" fill="#ec4899" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">72-DIM BIOLOGICAL STATE ENGINE</text>
+          <text x="160" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">8 Neuropsychological Layers</text>
+          <text x="160" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">FiLM conditioning modulates all nuclei</text>
+          <text x="160" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">emotional state &rarr; attention &rarr; behavior</text>
+        </g>
+
+        <!-- Self-Evolution Engine -->
+        <g transform="translate(725, 274)">
+          <rect x="0" y="0" width="330" height="90" rx="10" fill="#0a0f18" stroke="#10b981" stroke-width="1.5"/>
+          <rect x="0" y="0" width="330" height="22" rx="10" fill="#10b981" fill-opacity="0.06"/>
+          <rect x="0" y="10" width="330" height="12" fill="#10b981" fill-opacity="0.06"/>
+          <text x="165" y="16" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" letter-spacing="0.5">SELF-EVOLUTION ENGINE</text>
+          <text x="165" y="40" fill="#e2e8f0" font-size="12" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600">Infinite Self-play Training Loop</text>
+          <text x="165" y="58" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">Synthesizes new nuclei autonomously</text>
+          <text x="165" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="JetBrains Mono,monospace">pose &rarr; solve &rarr; verify &rarr; learn &rarr; repeat</text>
+        </g>
+
+        <!-- ═══ METRICS BAR ═══ -->
+        <rect x="40" y="440" width="1020" height="96" rx="10" fill="#060810" stroke="#1e293b" stroke-width="1"/>
+
+        <g transform="translate(80, 456)">
+          <text x="80" y="14" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" letter-spacing="1.5">ARCHITECTURE</text>
+          <text x="80" y="44" fill="#f59e0b" font-size="28" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">400B</text>
+          <text x="80" y="62" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">128 specialized experts</text>
+          <text x="80" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="Inter,sans-serif">Hot-pluggable nuclei</text>
+        </g>
+
+        <g transform="translate(310, 456)">
+          <text x="80" y="14" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" letter-spacing="1.5">REASONING</text>
+          <text x="80" y="44" fill="#6366f1" font-size="28" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">~3 min</text>
+          <text x="80" y="62" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">human deliberation / second</text>
+          <text x="80" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="Inter,sans-serif">15 think-check-revise cycles/s</text>
+        </g>
+
+        <g transform="translate(540, 456)">
+          <text x="80" y="14" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" letter-spacing="1.5">PERCEPTION</text>
+          <text x="80" y="44" fill="#ec4899" font-size="28" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">4 Modalities</text>
+          <text x="80" y="62" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">Text + Vision + Audio + Code</text>
+          <text x="80" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="Inter,sans-serif">One architecture, all inputs</text>
+        </g>
+
+        <g transform="translate(770, 456)">
+          <text x="80" y="14" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" letter-spacing="1.5">SELF-EVOLUTION</text>
+          <text x="80" y="44" fill="#10b981" font-size="28" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800">&infin;</text>
+          <text x="80" y="62" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">Continuous improvement</text>
+          <text x="80" y="76" fill="#64748b" font-size="9" text-anchor="middle" font-family="Inter,sans-serif">No human data required</text>
+        </g>
+
+        <line x1="270" y1="455" x2="270" y2="528" stroke="#1e293b" stroke-width="1"/>
+        <line x1="500" y1="455" x2="500" y2="528" stroke="#1e293b" stroke-width="1"/>
+        <line x1="730" y1="455" x2="730" y2="528" stroke="#1e293b" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 9: REVENUE MODEL -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="11">
+  <div class="full-width text-center">
+    <div class="label mb-16">BUSINESS MODEL</div>
+    <h2><span class="accent">Commercial Products</span></h2>
+    <p class="mt-8" style="margin:8px auto 32px;">Cognitive reasoning deployed where it matters most. UAE-first, global scale.</p>
+
+    <div class="card-grid cols-2 mt-24" style="max-width:1000px; margin:24px auto 0;">
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="width:40px; height:40px; border-radius:10px; background:rgba(0,212,255,0.15); display:flex; align-items:center; justify-content:center; font-size:20px;">1</div>
+          <div>
+            <h4>Cognitive AI Assistant</h4>
+            <div style="font-size:12px; color:var(--muted);">Global AI assistant market: $30B+ by 2030</div>
+          </div>
+        </div>
+        <p style="font-size:14px;">ChatGPT generates text. Engram actually <em>reasons</em>. A consumer AI assistant that can solve logic problems, plan complex tasks, debug code by understanding structure, and explain its thinking step by step. Not just pattern-matching - genuine problem-solving. The first AI assistant built on a cognitive architecture.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="width:40px; height:40px; border-radius:10px; background:rgba(99,102,241,0.15); display:flex; align-items:center; justify-content:center; font-size:20px;">2</div>
+          <div>
+            <h4>Sovereign Government AI</h4>
+            <div style="font-size:12px; color:var(--muted);">Abu Dhabi: full AI by 2027 &middot; $10B+ annual IT spend</div>
+          </div>
+        </div>
+        <p style="font-size:14px;">Air-gapped cognitive reasoning for government operations. Policy analysis, urban planning simulation, automated permit review. Abu Dhabi's $100B MGX fund is actively deploying AI across all ministries. Slick V3-mini runs on a single GPU - sovereign, private, no cloud dependency.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="width:40px; height:40px; border-radius:10px; background:rgba(139,92,246,0.15); display:flex; align-items:center; justify-content:center; font-size:20px;">3</div>
+          <div>
+            <h4>Defense & Security</h4>
+            <div style="font-size:12px; color:var(--muted);">UAE defense modernization &middot; Air-gapped deployment</div>
+          </div>
+        </div>
+        <p style="font-size:14px;">Autonomous situational awareness: multi-sensor fusion, threat pattern recognition, logistics optimization. Cognitive reasoning engine runs fully offline on edge hardware. No foreign API dependencies - complete data sovereignty. The architecture that reasons, not just classifies.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="width:40px; height:40px; border-radius:10px; background:rgba(16,185,129,0.15); display:flex; align-items:center; justify-content:center; font-size:20px;">4</div>
+          <div>
+            <h4>Smart City Planning & Infrastructure</h4>
+            <div style="font-size:12px; color:var(--muted);">UAE AI market: $46.3B by 2030 &middot; Digital twin adoption surging</div>
+          </div>
+        </div>
+        <p style="font-size:14px;">City-scale reasoning: traffic flow optimization, infrastructure lifecycle prediction, energy grid balancing, zoning simulation. Dubai's Smart City 2031 initiative needs AI that can model complex systems and reason about tradeoffs - not just pattern-match. Engram is built for exactly this.</p>
+      </div>
+    </div>
+
+    <div class="card mt-24" style="max-width:600px; margin:24px auto 0; text-align:center; border-color:var(--green);">
+      <div style="font-size:14px; color:var(--green); font-weight:600;">Revenue Projection</div>
+      <div style="font-size:13px; color:var(--muted); margin-top:8px;">
+        Y1: $500K-$1M (gov pilots + construction POCs) &middot;
+        Y2: $2M-$5M (deployments + licensing) &middot;
+        Y3: $10M-$25M (platform scale)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 10: THE ASK -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-radial-purple" data-slide="12">
+  <div class="full-width text-center">
+    <div class="label mb-16">THE ASK</div>
+    <h2 style="margin-bottom: 8px;">Pre-Seed: <span class="gradient-text">$150,000</span></h2>
+    <p style="margin:0 auto;">12-18 months of runway. One engineer. Maximum leverage.</p>
+
+    <table class="pitch-table mt-48" style="margin:48px auto 0;">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Allocation</th>
+          <th class="right">Amount</th>
+          <th class="right">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold" style="color:var(--accent);">GPU Compute - Slick V3 Training</td>
+          <td>8x H100 cluster, ~500 GPU-hours for Slick V3 190B training, eval runs, ablations</td>
+          <td class="right bold">$60,000</td>
+          <td class="right" style="color:var(--accent);">40%</td>
+        </tr>
+        <tr>
+          <td class="bold" style="color:var(--accent2);">GPU Compute - Slick V4 R&D</td>
+          <td>Continued training, multi-modal experiments, video reasoning R&D</td>
+          <td class="right bold">$30,000</td>
+          <td class="right" style="color:var(--accent2);">20%</td>
+        </tr>
+        <tr>
+          <td class="bold" style="color:var(--accent3);">API Infrastructure</td>
+          <td>Inference hosting, CDN, monitoring for commercial API launch</td>
+          <td class="right bold">$20,000</td>
+          <td class="right" style="color:var(--accent3);">13%</td>
+        </tr>
+        <tr>
+          <td class="bold" style="color:var(--orange);">Data & Licensing</td>
+          <td>Curated training datasets, annotation, specialized domain data</td>
+          <td class="right bold">$15,000</td>
+          <td class="right" style="color:var(--orange);">10%</td>
+        </tr>
+        <tr>
+          <td class="bold" style="color:var(--pink);">Operational Reserve</td>
+          <td>Travel, conferences (NeurIPS, ICML), legal, cloud services, living costs</td>
+          <td class="right bold">$25,000</td>
+          <td class="right" style="color:var(--pink);">17%</td>
+        </tr>
+        <tr style="border-top:2px solid var(--accent);">
+          <td class="bold" style="font-size:17px;">TOTAL</td>
+          <td></td>
+          <td class="right bold" style="font-size:17px; color:var(--accent);">$150,000</td>
+          <td class="right bold" style="color:var(--accent);">100%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card mt-32" style="max-width:700px; margin:32px auto 0; border-color:var(--accent); background:rgba(0,212,255,0.03);">
+      <p style="font-size:15px; text-align:center; color:var(--text); margin:0;">
+        <strong>60% of the raise goes directly to GPU compute.</strong><br>
+        <span style="color:var(--muted);">No fancy offices. No large team. One engineer with a DGX Spark, cloud GPUs when needed, and a clear technical roadmap backed by 6 architectural breakthroughs.</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 11: COMPETITIVE ADVANTAGE -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide" data-slide="13">
+  <div class="full-width text-center">
+    <div class="label mb-16">WHY US</div>
+    <h2>Unfair Advantages</h2>
+
+    <!-- ENGRAM NEURAL FABRIC - full-width hero card -->
+    <div class="card mt-32" style="max-width:1000px; margin:32px auto 0; border-color:var(--orange); background:rgba(245,158,11,0.03); padding:24px 28px;">
+      <div style="display:flex; align-items:start; gap:24px;">
+        <div style="flex:1;">
+          <h4 style="margin-bottom:6px; color:var(--orange); font-size:18px;">The Engram Neural Fabric <span style="font-size:13px; color:var(--muted); font-weight:500;">(HULLHB - High-speed, Ultra-Low Latency, High Bandwidth)</span></h4>
+          <p style="font-size:14px; margin-bottom:12px;">A modular neural interconnect inspired by the brain's <strong style="color:var(--text);">corpus callosum</strong>. Artificial nuclei are trained independently and slot into the HULLHB Fabric at runtime - <em>zero retraining of the base architecture</em>. High-speed routing, ultra-low latency signal propagation, high bandwidth between all nuclei simultaneously.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div style="font-size:12px; color:var(--muted); padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:6px; border-left:2px solid var(--accent);">
+              <strong style="color:var(--accent);">Artificial Occipital Lobe</strong> - PseudoDeepStack vision, multi-scale depth perception
+            </div>
+            <div style="font-size:12px; color:var(--muted); padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:6px; border-left:2px solid var(--accent2);">
+              <strong style="color:var(--accent2);">Artificial Prefrontal Cortex</strong> - GDiT reasoning, metacognitive verification
+            </div>
+            <div style="font-size:12px; color:var(--muted); padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:6px; border-left:2px solid var(--accent3);">
+              <strong style="color:var(--accent3);">Artificial Hippocampus</strong> - Episodic memory, semantic recall, persistent identity
+            </div>
+            <div style="font-size:12px; color:var(--muted); padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:6px; border-left:2px solid var(--green);">
+              <strong style="color:var(--green);">Artificial Basal Ganglia</strong> - Skill library, action selection, expert routing
+            </div>
+          </div>
+          <p style="font-size:13px; color:var(--orange); margin-top:12px; margin-bottom:0; font-weight:600;">In V4 - the system synthesizes its own nuclei and installs them autonomously via the Fabric.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-grid cols-3 mt-16" style="max-width:1000px; margin:16px auto 0;">
+      <div class="card" style="border-left:3px solid var(--orange); padding:20px;">
+        <h4 style="margin-bottom:8px; font-size:15px;">Cognitive Mesh Router</h4>
+        <p style="font-size:13px;">Modeled on the <strong style="color:var(--text);">artificial thalamus</strong> - the brain's central relay nucleus. Routes signals across the HULLHB Fabric to the right artificial nucleus at the right time. 4 reasoning modes (System 1, System 2, Tree Search, Memory) with <strong style="color:var(--orange);">mid-sequence switching</strong>. The router <em>learns</em> which nuclei to activate for each problem type.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent); padding:20px;">
+        <h4 style="margin-bottom:8px; font-size:15px;">GDiT Reasoning Engine</h4>
+        <p style="font-size:13px;">Discrete diffusion logic engine. 5-step iterative unmasking with grid-native 2D attention, confidence-based ordering, metacognitive re-masking. <strong style="color:var(--text);">300x faster</strong> than Stable Diffusion, 23x smaller. Processes the entire problem simultaneously - not left-to-right.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent3); padding:20px;">
+        <h4 style="margin-bottom:8px; font-size:15px;">72-Dim Biological State</h4>
+        <p style="font-size:13px;">Eight neuropsychological layers modulate every computation via subliminal FiLM conditioning. <strong style="color:var(--text);">Emotions choose which nuclei fire.</strong> The <strong style="color:var(--text);">artificial anterior cingulate</strong> (metacognition layer) detects its own errors and triggers re-reasoning. No other AI has internal experience.</p>
+      </div>
+    </div>
+
+    <!-- Efficiency callout -->
+    <div style="max-width:1000px; margin:12px auto 0; text-align:center; padding:10px; border-radius:8px; background:rgba(99,102,241,0.04); border:1px solid rgba(99,102,241,0.1);">
+      <span style="font-size:13px; color:var(--muted);">One engineer. One DGX Spark. 10 days. Slick V1.5 complete. <strong style="color:var(--accent2);">$150K goes further than $1.5M</strong> at a typical AI startup.</span>
+    </div>
+
+    <div class="card mt-24" style="max-width:1000px; margin:24px auto 0;">
+      <h4 style="margin-bottom:16px; text-align:center;">How We Compare</h4>
+      <table class="pitch-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>GPT-4o</th>
+            <th>Gemini 1.5</th>
+            <th>MindsAI</th>
+            <th style="color:var(--accent);">Engram V3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--muted);">Architecture</td>
+            <td>Autoregressive</td>
+            <td>Autoregressive</td>
+            <td>Multi-system</td>
+            <td class="bold" style="color:var(--accent);">Cognitive Mesh</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted);">Structured reasoning</td>
+            <td>1D serialized</td>
+            <td>1D serialized</td>
+            <td>Search-based</td>
+            <td class="bold" style="color:var(--accent);">Iterative diffusion</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted);">Modularity</td>
+            <td style="color:var(--red);">Monolithic</td>
+            <td style="color:var(--red);">Monolithic</td>
+            <td>Partial</td>
+            <td class="bold" style="color:var(--accent);">Neural Fabric</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted);">Internal state</td>
+            <td style="color:var(--red);">None</td>
+            <td style="color:var(--red);">None</td>
+            <td style="color:var(--red);">None</td>
+            <td class="bold" style="color:var(--accent);">72-dim bio</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted);">Cost to build</td>
+            <td>~$100M+</td>
+            <td>~$100M+</td>
+            <td>Unknown</td>
+            <td class="bold" style="color:var(--accent);">$150K</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SLIDE 12: CLOSING -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="slide bg-grid bg-radial" data-slide="14">
+  <div class="text-center">
+    <h1 class="gradient-text">Let's Build<br>the Future of Reasoning</h1>
+
+    <p class="mt-24" style="margin:24px auto; font-size:20px; color:var(--text);">
+      Six breakthroughs. A working prototype. A clear path to general reasoning.<br>
+      All we need is GPU hours.
+    </p>
+
+    <div class="card mt-48" style="display:inline-block; padding:32px 48px; border-color:var(--accent); text-align:center;">
+      <div style="font-size:14px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;">Contact</div>
+      <div style="font-size:24px; font-weight:700;">Vincent Kaufmann</div>
+      <div style="font-size:16px; color:var(--muted); margin-top:8px;">Founder & Engineer</div>
+      <div style="margin-top:16px; font-size:14px; color:var(--accent);">
+        vincentkaufmann (HuggingFace) &middot; Dubai, UAE
+      </div>
+    </div>
+
+    <div class="mt-32" style="display:flex; gap:32px; justify-content:center; margin-top:32px;">
+      <div class="stat-card">
+        <div class="stat-value accent" style="font-size:36px;">$150K</div>
+        <div class="stat-label">Pre-seed ask</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value accent2" style="font-size:36px;">60+</div>
+        <div class="stat-label">Innovations designed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value accent3" style="font-size:36px;">5</div>
+        <div class="stat-label">Cognitive modules</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value green" style="font-size:36px;">6</div>
+        <div class="stat-label">Breakthroughs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /slide-container -->
+
+<script>
+let currentSlide = 0;
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+document.getElementById('slide-total').textContent = totalSlides;
+
+// Create nav dots
+const nav = document.getElementById('slide-nav');
+for (let i = 0; i < totalSlides; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
+  dot.onclick = () => goToSlide(i);
+  nav.appendChild(dot);
+}
+
+function goToSlide(n) {
+  if (n < 0 || n >= totalSlides || n === currentSlide) return;
+
+  // Remove active/prev from ALL slides
+  slides.forEach(s => s.classList.remove('active', 'prev'));
+
+  currentSlide = n;
+  slides[currentSlide].classList.add('active');
+
+  document.getElementById('slide-num').textContent = currentSlide + 1;
+
+  // Update dots
+  document.querySelectorAll('.slide-dot').forEach((d, i) => {
+    d.className = 'slide-dot' + (i === currentSlide ? ' active' : '');
+  });
+}
+
+function nextSlide() { goToSlide(currentSlide + 1); }
+function prevSlide() { goToSlide(currentSlide - 1); }
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault(); nextSlide();
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault(); prevSlide();
+  }
+  if (e.key === 'Home') { e.preventDefault(); goToSlide(0); }
+  if (e.key === 'End') { e.preventDefault(); goToSlide(totalSlides - 1); }
+});
+
+// Click navigation (left/right halves)
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.slide-nav') || e.target.closest('a') ||
+      e.target.closest('button') || e.target.closest('input') ||
+      e.target.closest('select')) return;
+  if (e.clientX > window.innerWidth / 2) nextSlide();
+  else prevSlide();
+});
+
+// Touch navigation
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) {
+    if (diff > 0) nextSlide(); else prevSlide();
+  }
+});
+
+// ── Explainer sub-page navigation ──
+let explainerPage = 0;
+const explainerTitles = [
+  'Step 1: Set the Mood',
+  'Step 2: Recall Building Blocks',
+  'Step 3: Sculpt the Answer',
+  'Step 4: Imagine the Outcome',
+  'Step 5: Check Every Move',
+  'Step 6: One Brain, Two Roles'
+];
+const explainerPages = document.querySelectorAll('.explainer-page');
+const flowSteps = document.querySelectorAll('.flow-step');
+
+function explainerNav(dir) {
+  const next = explainerPage + dir;
+  if (next < 0 || next >= 6) return;
+  explainerPages[explainerPage].classList.remove('active');
+  explainerPage = next;
+  explainerPages[explainerPage].classList.add('active');
+  document.getElementById('explainer-num').textContent = explainerPage + 1;
+  document.getElementById('explainer-title').textContent = explainerTitles[explainerPage];
+  // Update flow diagram
+  flowSteps.forEach((s, i) => {
+    s.classList.remove('flow-active', 'flow-done');
+    if (i === explainerPage) s.classList.add('flow-active');
+    else if (i < explainerPage) s.classList.add('flow-done');
+  });
+  // Update button states
+  document.getElementById('explainer-prev').style.opacity = explainerPage === 0 ? '0.3' : '1';
+  document.getElementById('explainer-next').textContent = explainerPage === 5 ? 'DONE' : 'NEXT \u25B6';
+}
+
+// Prevent explainer buttons from triggering slide navigation
+document.querySelectorAll('#explainer-prev, #explainer-next').forEach(btn => {
+  btn.addEventListener('click', (e) => { e.stopPropagation(); });
+});
+</script>
+</body>
+</html>
